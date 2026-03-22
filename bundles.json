@@ -1,0 +1,53 @@
+{
+	"manifest": [
+		{
+			"key": "assets/content/items/containers/item_container_gearbox.bundle",
+			"dependencyKeys": [
+                "assets/commonassets/physics/physicsmaterials.bundle",
+                "cubemaps",
+                "shaders"
+            ]
+		},
+		{
+			"key": "assets/content/items/containers/item_container_modbox.bundle",
+			"dependencyKeys": [
+                "assets/commonassets/physics/physicsmaterials.bundle",
+                "cubemaps",
+                "shaders"
+            ]
+		},
+		{
+            "key": "assets/content/items/containers/recycled_ammo_bag.bundle",
+            "dependencyKeys": [
+                "assets/commonassets/physics/physicsmaterials.bundle",
+                "cubemaps",
+                "shaders"
+            ]
+        },
+        {
+			"key": "assets/content/items/containers/recycled_fak.bundle",
+			"dependencyKeys": [
+                "assets/commonassets/physics/physicsmaterials.bundle",
+                "cubemaps",
+                "shaders"
+            ]
+		},
+        {
+			"key": "assets/content/items/containers/small_portable_fridge.bundle",
+			"dependencyKeys": [
+                "assets/commonassets/physics/physicsmaterials.bundle",
+                "cubemaps",
+                "shaders"
+            ]
+		}
+        ,
+        {
+			"key": "assets/content/items/containers/small_toolbox.bundle",
+			"dependencyKeys": [
+                "assets/commonassets/physics/physicsmaterials.bundle",
+                "cubemaps",
+                "shaders"
+            ]
+		}
+	]
+}
