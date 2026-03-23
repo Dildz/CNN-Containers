@@ -15,7 +15,7 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = "CNN-Containers";
     public override string Author { get; init; } = "Cannuccia";
     public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("4.0.0");
+    public override SemanticVersioning.Version Version { get; init; } = new("4.1.0");
     public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
@@ -63,10 +63,33 @@ public class CnnContainersLoader(
     private const string SmallFridgeId  = "683d09c63c277dad20e4260b";
     private const string SmallToolboxId = "683d09cd0c8ec927b398b7b7";
 
+    // Mapbook item - slot-based container for maps (not grid-based, so handled separately)
+    private const string MapbookId = "683d09d8a1b2c3d4e5f60001";
+    private const string MapbookCloneBase = "5f4f9eb969cdc30ff33f09db";
+    private const string MapbookParentId = "55818a104bdc2db9688b4569";
+    private const string MapbookHandbookParentId = "5b47574386f77428ca22b345";
+
+    // Map template IDs (one per slot in the mapbook)
+    private static readonly (string Name, string Id)[] MapIds =
+    [
+        ("Ground Zero", "6738033eb7305d3bdafe9518"),
+        ("Streets",     "673803448cb3819668d77b1b"),
+        ("Reserve",     "6738034a9713b5f42b4a8b78"),
+        ("Labs",        "6738034e9d22459ad7cd1b81"),
+        ("Lighthouse",  "6738035350b24a4ae4a57997"),
+        ("Factory",     "574eb85c245977648157eec3"),
+        ("Woods",       "5900b89686f7744e704a8747"),
+        ("Interchange", "5be4038986f774527d3fae60"),
+        ("Shoreline",   "5a8036fb86f77407252ddc02"),
+        ("Customs",     "5798a2832459774b53341029"),
+        ("Sanatorium",  "5a80a29286f7742b25692012"),
+        ("Labyrinth",   "68f1ad32317cc52f4c0b6fae"),
+    ];
+
     // Items allowed in both stash AND player inventory (backpacks, vests, secure containers)
     private static readonly string[] PortableItemIds =
     [
-        AmmoBagId, RecycledFakId, SmallFridgeId
+        AmmoBagId, RecycledFakId, SmallFridgeId, MapbookId
     ];
 
     // Items restricted to stash only - too bulky for player inventory
@@ -162,6 +185,7 @@ public class CnnContainersLoader(
     [
         ("54cb50c76803fa8b248b4571", AmmoBagId,      Roubles, 36980,   1), // Prapor
         ("54cb57776803fa99248b456e", RecycledFakId,  Roubles, 52572,   1), // Therapist
+        ("54cb57776803fa99248b456e", MapbookId,      Roubles, 48500,   1), // Therapist
         ("5935c25fb3acc3127c3d8cd9", ModCaseId,      Dollars, 434,     1), // Skier
         ("5a7c2eca46aef81a7ca2145d", SmallToolboxId, Euros,   118,     1), // Ragman
         ("5ac3b934156ae10c4430e83c", GearBoxId,      Roubles, 1118054, 1), // Mechanic
@@ -173,9 +197,11 @@ public class CnnContainersLoader(
         foreach (var def in Containers)
             CreateContainer(def);
 
+        CreateMapbook();
         AddLocales();
         AddToTraderAssorts();
         PatchSecureContainers();
+        PatchSpecialSlots();
         ExcludeFromEquipment();
 
         logger.Success("[CNN-Containers] Loaded successfully.");
@@ -254,6 +280,75 @@ public class CnnContainersLoader(
         });
     }
 
+    private void CreateMapbook()
+    {
+        var slots = new List<Slot>();
+        for (var i = 0; i < MapIds.Length; i++)
+        {
+            var (_, mapId) = MapIds[i];
+            slots.Add(new Slot
+            {
+                Name = $"mod_mount_{(i + 1).ToString().PadLeft(2, '0')}",
+                Id = new MongoId(),
+                Parent = "55818b224bdc2dde698b456f",
+                Properties = new SlotProperties
+                {
+                    Filters = new List<SlotFilter>
+                    {
+                        new SlotFilter
+                        {
+                            Filter = new HashSet<MongoId> { new MongoId(mapId) }
+                        }
+                    }
+                },
+                Required = false,
+                MergeSlotWithChildren = false,
+                Prototype = "55d4af244bdc2d962f8b4571"
+            });
+        }
+
+        customItemService.CreateItemFromClone(new NewItemFromCloneDetails
+        {
+            ItemTplToClone = MapbookCloneBase,
+            NewId = MapbookId,
+            ParentId = MapbookParentId,
+            HandbookParentId = MapbookHandbookParentId,
+            HandbookPriceRoubles = 48500,
+            FleaPriceRoubles = 48500,
+            Locales = new Dictionary<string, LocaleDetails>
+            {
+                {
+                    "en", new LocaleDetails
+                    {
+                        Name = "Secure Mapbook",
+                        ShortName = "Mapbook",
+                        Description = "A meticulously crafted book designed for storing and organizing maps."
+                    }
+                }
+            },
+            OverrideProperties = new TemplateItemProperties
+            {
+                Name = "Secure Mapbook",
+                ShortName = "Mapbook",
+                Description = "A meticulously crafted book designed for storing and organizing maps.",
+                Width = 1,
+                Height = 2,
+                Weight = 0.5f,
+                BackgroundColor = "grey",
+                CanPutIntoDuringTheRaid = true,
+                CanSellOnRagfair = true,
+                CanRequireOnRagfair = false,
+                ExaminedByDefault = true,
+                InsuranceDisabled = false,
+                ItemSound = "item_book",
+                MergesWithChildren = false,
+                Prefab = new Prefab { Path = "assets/content/items/barter/item_mapbook/mapbook.bundle" },
+                Grids = new List<Grid>(),
+                Slots = slots
+            }
+        });
+    }
+
     // Add item name/shortname/description to all language locales via lazy transformer.
     // SPT lazy-loads locales so we must use AddTransformer rather than direct assignment.
     private void AddLocales()
@@ -269,6 +364,9 @@ public class CnnContainersLoader(
                     data[$"{def.Id} ShortName"] = def.ShortName;
                     data[$"{def.Id} Description"] = def.Description;
                 }
+                data[$"{MapbookId} Name"] = "Secure Mapbook";
+                data[$"{MapbookId} ShortName"] = "Mapbook";
+                data[$"{MapbookId} Description"] = "A meticulously crafted book designed for storing and organizing maps.";
                 return data;
             });
         }
@@ -336,6 +434,36 @@ public class CnnContainersLoader(
                     filter.Filter.Add(id);
 
                 grid.Properties.Filters = filterList;
+            }
+        }
+    }
+
+    // Add the mapbook to every special slot so it can be placed in the special slots.
+    private void PatchSpecialSlots()
+    {
+        var mapbookMongoId = new MongoId(MapbookId);
+
+        foreach (var (_, tpl) in databaseService.GetItems())
+        {
+            if (tpl.Properties?.Slots == null) continue;
+
+            foreach (var slot in tpl.Properties.Slots)
+            {
+                if (slot?.Name == null || !slot.Name.Contains("SpecialSlot", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                slot.Properties ??= new SlotProperties();
+
+                var filterList = slot.Properties.Filters?.ToList() ?? new List<SlotFilter>();
+
+                if (!filterList.Any())
+                    filterList.Add(new SlotFilter { Filter = new HashSet<MongoId>() });
+
+                var filter = filterList.First();
+                filter.Filter ??= new HashSet<MongoId>();
+                filter.Filter.Add(mapbookMongoId);
+
+                slot.Properties.Filters = filterList;
             }
         }
     }
