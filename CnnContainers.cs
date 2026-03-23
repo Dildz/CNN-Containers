@@ -15,7 +15,7 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = "CNN-Containers";
     public override string Author { get; init; } = "Cannuccia";
     public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("4.1.0");
+    public override SemanticVersioning.Version Version { get; init; } = new("4.2.1");
     public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
@@ -62,12 +62,20 @@ public class CnnContainersLoader(
     private const string RecycledFakId  = "683d09bda7c49f4eead357ec";
     private const string SmallFridgeId  = "683d09c63c277dad20e4260b";
     private const string SmallToolboxId = "683d09cd0c8ec927b398b7b7";
+    private const string WoodenBoxId   = "683d09e1f5a4b7c8d9e20003";
 
     // Mapbook item - slot-based container for maps (not grid-based, so handled separately)
     private const string MapbookId = "683d09d8a1b2c3d4e5f60001";
     private const string MapbookCloneBase = "5f4f9eb969cdc30ff33f09db";
     private const string MapbookParentId = "55818a104bdc2db9688b4569";
     private const string MapbookHandbookParentId = "5b47574386f77428ca22b345";
+
+    // Onyx secure container - multi-grid secure container cloned from Kappa
+    private const string OnyxId = "674a33573fef1c2943025680";
+    private const string OnyxCloneBase = "5c093ca986f7740a1867ab12";      // Kappa
+    private const string OnyxHandbookParentId = "5b5f6fd286f774093f2ed3c4"; // Secure Containers handbook
+    private const string OnyxFilterInclude = "54009119af1c881c07000029";    // Item base category
+    private const string OnyxFilterExclude = "5447e1d04bdc2dff2f8b4567";    // Weapons
 
     // Map template IDs (one per slot in the mapbook)
     private static readonly (string Name, string Id)[] MapIds =
@@ -95,7 +103,7 @@ public class CnnContainersLoader(
     // Items restricted to stash only - too bulky for player inventory
     private static readonly string[] StashOnlyItemIds =
     [
-        GearBoxId, ModCaseId, SmallToolboxId
+        GearBoxId, ModCaseId, SmallToolboxId, WoodenBoxId
     ];
 
     // Per-container definition: all data needed to create the item and register it
@@ -178,6 +186,15 @@ public class CnnContainersLoader(
             3.6, "blue",
             "assets/content/items/containers/small_toolbox.bundle",
             14045),
+
+        new(WoodenBoxId,
+            "Ruined Wooden Box", "RW-BOX",
+            "A worn-out wooden crate, still sturdy enough to store just about anything.",
+            5, 3, 12, 8,
+            ["54009119af1c881c07000029"], // Item (accepts everything)
+            11.4, "grey",
+            "assets/content/items/containers/ruined_wooden_box.bundle",
+            750000),
     ];
 
     // Trader assort entries: one item per trader, matching v3 prices/currencies exactly
@@ -186,10 +203,11 @@ public class CnnContainersLoader(
         ("54cb50c76803fa8b248b4571", AmmoBagId,      Roubles, 36980,   1), // Prapor
         ("54cb57776803fa99248b456e", RecycledFakId,  Roubles, 52572,   1), // Therapist
         ("54cb57776803fa99248b456e", MapbookId,      Roubles, 48500,   1), // Therapist
-        ("5935c25fb3acc3127c3d8cd9", ModCaseId,      Dollars, 434,     1), // Skier
+        ("5935c25fb3acc3127c3d8cd9", ModCaseId,      Dollars, 434,     1), // Peacekeeper
         ("5a7c2eca46aef81a7ca2145d", SmallToolboxId, Euros,   118,     1), // Ragman
         ("5ac3b934156ae10c4430e83c", GearBoxId,      Roubles, 1118054, 1), // Mechanic
         ("5c0647fdd443bc2504c2d371", SmallFridgeId,  Roubles, 20690,   1), // Jaeger
+        ("5c0647fdd443bc2504c2d371", WoodenBoxId,    Roubles, 750000,  1), // Jaeger
     ];
 
     public Task OnLoad()
@@ -198,11 +216,13 @@ public class CnnContainersLoader(
             CreateContainer(def);
 
         CreateMapbook();
+        CreateOnyx();
         AddLocales();
         AddToTraderAssorts();
         PatchSecureContainers();
         PatchSpecialSlots();
         ExcludeFromEquipment();
+        ExcludeMapbookFromModCase();
 
         logger.Success("[CNN-Containers] Loaded successfully.");
         return Task.CompletedTask;
@@ -349,6 +369,78 @@ public class CnnContainersLoader(
         });
     }
 
+    private void CreateOnyx()
+    {
+        var gridFilter = new List<GridFilter>
+        {
+            new GridFilter
+            {
+                Filter = new HashSet<MongoId> { new MongoId(OnyxFilterInclude) },
+                ExcludedFilter = new HashSet<MongoId> { new MongoId(OnyxFilterExclude) }
+            }
+        };
+
+        Grid MakeGrid(string name, int cellsH, int cellsV) => new Grid
+        {
+            Id = new MongoId(),
+            Name = name,
+            Parent = new MongoId(OnyxId),
+            Prototype = new MongoId(GridProto),
+            Properties = new GridProperties
+            {
+                CellsH = cellsH,
+                CellsV = cellsV,
+                IsSortingTable = false,
+                MaxCount = 0,
+                MaxWeight = 0,
+                MinCount = 0,
+                Filters = gridFilter
+            }
+        };
+
+        customItemService.CreateItemFromClone(new NewItemFromCloneDetails
+        {
+            ItemTplToClone = OnyxCloneBase,
+            NewId = OnyxId,
+            ParentId = SecureContainerParentId,
+            HandbookParentId = OnyxHandbookParentId,
+            HandbookPriceRoubles = 12999999,
+            FleaPriceRoubles = 12999999,
+            Locales = new Dictionary<string, LocaleDetails>
+            {
+                {
+                    "en", new LocaleDetails
+                    {
+                        Name = "Secure Container Onyx",
+                        ShortName = "OnyxSC",
+                        Description = "A secret Black Division invention for maximum storage - the Onyx secured container."
+                    }
+                }
+            },
+            OverrideProperties = new TemplateItemProperties
+            {
+                Name = "Secure Container Onyx",
+                ShortName = "OnyxSC",
+                Description = "A secret Black Division invention for maximum storage - the Onyx secured container.",
+                CanSellOnRagfair = false,
+                CanRequireOnRagfair = false,
+                ExaminedByDefault = true,
+                HideEntrails = true,
+                InsuranceDisabled = true,
+                ItemSound = "container_metal",
+                DiscardLimit = -1,
+                MergesWithChildren = false,
+                Prefab = new Prefab { Path = "assets/content/items/containers/RopesContainer.bundle" },
+                Grids = new List<Grid>
+                {
+                    MakeGrid("GridView (1)", 2, 3),
+                    MakeGrid("GridView (2)", 3, 4),
+                    MakeGrid("GridView (3)", 1, 2)
+                }
+            }
+        });
+    }
+
     // Add item name/shortname/description to all language locales via lazy transformer.
     // SPT lazy-loads locales so we must use AddTransformer rather than direct assignment.
     private void AddLocales()
@@ -367,6 +459,9 @@ public class CnnContainersLoader(
                 data[$"{MapbookId} Name"] = "Secure Mapbook";
                 data[$"{MapbookId} ShortName"] = "Mapbook";
                 data[$"{MapbookId} Description"] = "A meticulously crafted book designed for storing and organizing maps.";
+                data[$"{OnyxId} Name"] = "Secure Container Onyx";
+                data[$"{OnyxId} ShortName"] = "OnyxSC";
+                data[$"{OnyxId} Description"] = "A secret Black Division invention for maximum storage - the Onyx secured container.";
                 return data;
             });
         }
@@ -402,6 +497,38 @@ public class CnnContainersLoader(
             };
 
             assort.LoyalLevelItems[assortItemId] = loyaltyLevel;
+        }
+
+        // Onyx barter trade: Kappa + $85000 from Peacekeeper LL4
+        {
+            var onyxAssortId = new MongoId();
+            var pkAssort = databaseService.GetTrader(new MongoId("5935c25fb3acc3127c3d8cd9"))?.Assort;
+            if (pkAssort is not null)
+            {
+                pkAssort.Items.Add(new Item
+                {
+                    Id = onyxAssortId,
+                    Template = new MongoId(OnyxId),
+                    ParentId = "hideout",
+                    SlotId = "hideout",
+                    Upd = new Upd
+                    {
+                        UnlimitedCount = true,
+                        StackObjectsCount = 999
+                    }
+                });
+
+                pkAssort.BarterScheme[onyxAssortId] = new List<List<BarterScheme>>
+                {
+                    new List<BarterScheme>
+                    {
+                        new BarterScheme { Template = new MongoId(OnyxCloneBase), Count = 1 },
+                        new BarterScheme { Template = new MongoId(Dollars), Count = 85000 }
+                    }
+                };
+
+                pkAssort.LoyalLevelItems[onyxAssortId] = 4;
+            }
         }
     }
 
@@ -503,6 +630,26 @@ public class CnnContainersLoader(
 
                 grid.Properties.Filters = filterList;
             }
+        }
+    }
+
+    // The mapbook's parent falls under weapon mods, so exclude it from the mod case.
+    private void ExcludeMapbookFromModCase()
+    {
+        var items = databaseService.GetItems();
+        if (!items.TryGetValue(new MongoId(ModCaseId), out var modCase)) return;
+
+        var grids = modCase.Properties?.Grids;
+        if (grids == null) return;
+
+        var mapbookMongoId = new MongoId(MapbookId);
+        foreach (var grid in grids)
+        {
+            var filter = grid.Properties?.Filters?.FirstOrDefault();
+            if (filter == null) continue;
+
+            filter.ExcludedFilter ??= new HashSet<MongoId>();
+            filter.ExcludedFilter.Add(mapbookMongoId);
         }
     }
 }

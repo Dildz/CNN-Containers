@@ -52,6 +52,22 @@
 		{
 			"key": "assets/content/items/barter/item_mapbook/mapbook.bundle",
 			"dependencyKeys": []
+		},
+		{
+			"key": "assets/content/items/containers/ruined_wooden_box.bundle",
+			"dependencyKeys": [
+                "assets/commonassets/physics/physicsmaterials.bundle",
+                "cubemaps",
+                "shaders"
+            ]
+		},
+		{
+			"key": "assets/content/items/containers/RopesContainer.bundle",
+			"dependencyKeys": [
+                "assets/commonassets/physics/physicsmaterials.bundle",
+                "cubemaps",
+                "shaders"
+            ]
 		}
 	]
 }
