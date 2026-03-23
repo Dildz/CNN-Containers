@@ -5,6 +5,7 @@ Full rework of the CNN-CONTAINERS mod (v4)
 
 Installation:
 Download and Extract: Download the mod package zip and extract it into your SPT directory.
+
 Note: If you had a previous version of this mod installed, go to the SPT launcher's settings and click "Clean Temp Files" before launching.
 
 
@@ -61,6 +62,9 @@ This mod is licensed under the MIT License. See the LICENSE file for more detail
 
 Credits:
 [Cannuccia](https://forge.sp-tarkov.com/user/16896/cannuccia) for the original CNN_Container mod.
+
 [AMightyTank](https://forge.sp-tarkov.com/user/59864/amightytank) for updating to SPT 3.11.X
+
 [MrVibesRSA](https://forge.sp-tarkov.com/user/75504/mrvibesrsa) for the Secure Mapbook mod.
+
 [Dsnyder](https://forge.sp-tarkov.com/user/28568/dsnyder) for the Container-Onyx (Re-Upload) mod.
