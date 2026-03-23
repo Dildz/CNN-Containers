@@ -1,0 +1,33 @@
+{
+    // CNN-Containers Configuration
+    // Enable or disable individual containers, adjust prices, trader loyalty levels, and grid sizes.
+    // Prices are in the container's native currency (roubles, dollars, or euros depending on the trader).
+    // Disabled containers won't be created or appear at traders.
+    //
+    // WARNING: Disabling a container or changing its grid size after you've already used it in your
+    // profile (items stored inside) can cause profile corruption or item loss.
+    // Only change sizes after emptying the affected containers.
+    // Delete a case from your profile first if you want to disable it after using it.
+
+    "gearBox":      { "enabled": true, "price": 1118054, "loyaltyLevel": 1, "gridH": 12, "gridV": 10 },
+    "modCase":      { "enabled": true, "price": 434,     "loyaltyLevel": 1, "gridH": 7,  "gridV": 7 },
+    "ammoBag":      { "enabled": true, "price": 36980,   "loyaltyLevel": 1, "gridH": 2,  "gridV": 2 },
+    "recycledFak":  { "enabled": true, "price": 52572,   "loyaltyLevel": 1, "gridH": 3,  "gridV": 3 },
+    "smallFridge":  { "enabled": true, "price": 20690,   "loyaltyLevel": 1, "gridH": 4,  "gridV": 4 },
+    "smallToolbox": { "enabled": true, "price": 118,     "loyaltyLevel": 1, "gridH": 6,  "gridV": 4 },
+    "woodenBox":    { "enabled": true, "price": 752047,  "loyaltyLevel": 1, "gridH": 12, "gridV": 8 },
+
+    // Mapbook is slot-based (one slot per map), so no grid size options
+    "mapbook":      { "enabled": true, "price": 48523,   "loyaltyLevel": 1 },
+
+    // Onyx uses a barter trade (Kappa + dollars) from Peacekeeper, so dollarPrice instead of price
+    // Each of the 3 grids can be resized independently
+    "onyx": {
+        "enabled": true,
+        "dollarPrice": 85259,
+        "loyaltyLevel": 4,
+        "grid1H": 2, "grid1V": 3,
+        "grid2H": 3, "grid2V": 4,
+        "grid3H": 1, "grid3V": 2
+    }
+}

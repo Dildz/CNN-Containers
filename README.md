@@ -5,6 +5,17 @@ Full rework of the CNN-CONTAINERS mod (v4)
 
 Installation:
 Download and Extract: Download the mod package zip and extract it into your SPT directory.
+Note: If you had a previous version of this mod installed, go to the SPT launcher's settings and click "Clean Temp Files" before launching.
+
+
+Configuration:
+Edit `config/config.jsonc` to customize the mod. You can:
+- Enable or disable individual containers
+- Change trader prices and loyalty levels
+- Resize container grids (except the Mapbook, which uses fixed slots)
+- Resize each of the Onyx's 3 grids independently
+
+**WARNING:** Disabling a container or changing its grid size after you've already used it in your profile (items stored inside) can cause profile corruption or item loss. Only change these settings on a fresh profile or after emptying the affected containers.
 
 
 Containers:
@@ -51,4 +62,5 @@ This mod is licensed under the MIT License. See the LICENSE file for more detail
 Credits:
 [Cannuccia](https://forge.sp-tarkov.com/user/16896/cannuccia) for the original CNN_Container mod.
 [AMightyTank](https://forge.sp-tarkov.com/user/59864/amightytank) for updating to SPT 3.11.X
-[Roze And DJ](https://forge.sp-tarkov.com/user/66142/roze-and-dj) for the original OnyxContainer mod.
+[MrVibesRSA](https://forge.sp-tarkov.com/user/75504/mrvibesrsa) for the Secure Mapbook mod.
+[Dsnyder](https://forge.sp-tarkov.com/user/28568/dsnyder) for the Container-Onyx (Re-Upload) mod.

@@ -1,5 +1,9 @@
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
+using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Mod;
@@ -15,7 +19,7 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = "CNN-Containers";
     public override string Author { get; init; } = "Cannuccia";
     public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("4.2.1");
+    public override SemanticVersioning.Version Version { get; init; } = new("4.2.2");
     public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
@@ -24,12 +28,57 @@ public record ModMetadata : AbstractModMetadata
     public override string License { get; init; } = "MIT";
 }
 
+public record ContainerConfig
+{
+    [JsonPropertyName("enabled")]     public bool Enabled { get; init; } = true;
+    [JsonPropertyName("price")]       public int Price { get; init; }
+    [JsonPropertyName("loyaltyLevel")] public int LoyaltyLevel { get; init; } = 1;
+    [JsonPropertyName("gridH")]       public int GridH { get; init; }
+    [JsonPropertyName("gridV")]       public int GridV { get; init; }
+}
+
+public record MapbookConfig
+{
+    [JsonPropertyName("enabled")]     public bool Enabled { get; init; } = true;
+    [JsonPropertyName("price")]       public int Price { get; init; } = 48500;
+    [JsonPropertyName("loyaltyLevel")] public int LoyaltyLevel { get; init; } = 1;
+}
+
+public record OnyxConfig
+{
+    [JsonPropertyName("enabled")]      public bool Enabled { get; init; } = true;
+    [JsonPropertyName("dollarPrice")]  public int DollarPrice { get; init; } = 85000;
+    [JsonPropertyName("loyaltyLevel")] public int LoyaltyLevel { get; init; } = 4;
+    [JsonPropertyName("grid1H")]       public int Grid1H { get; init; } = 2;
+    [JsonPropertyName("grid1V")]       public int Grid1V { get; init; } = 3;
+    [JsonPropertyName("grid2H")]       public int Grid2H { get; init; } = 3;
+    [JsonPropertyName("grid2V")]       public int Grid2V { get; init; } = 4;
+    [JsonPropertyName("grid3H")]       public int Grid3H { get; init; } = 1;
+    [JsonPropertyName("grid3V")]       public int Grid3V { get; init; } = 2;
+}
+
+public record ModConfig
+{
+    [JsonPropertyName("gearBox")]      public ContainerConfig GearBox { get; init; } = new() { Price = 1118054, GridH = 12, GridV = 8 };
+    [JsonPropertyName("modCase")]      public ContainerConfig ModCase { get; init; } = new() { Price = 434, GridH = 7, GridV = 7 };
+    [JsonPropertyName("ammoBag")]      public ContainerConfig AmmoBag { get; init; } = new() { Price = 36980, GridH = 2, GridV = 2 };
+    [JsonPropertyName("recycledFak")]  public ContainerConfig RecycledFak { get; init; } = new() { Price = 52572, GridH = 3, GridV = 3 };
+    [JsonPropertyName("smallFridge")]  public ContainerConfig SmallFridge { get; init; } = new() { Price = 20690, GridH = 4, GridV = 4 };
+    [JsonPropertyName("smallToolbox")] public ContainerConfig SmallToolbox { get; init; } = new() { Price = 118, GridH = 6, GridV = 4 };
+    [JsonPropertyName("woodenBox")]    public ContainerConfig WoodenBox { get; init; } = new() { Price = 750000, GridH = 12, GridV = 8 };
+    [JsonPropertyName("mapbook")]      public MapbookConfig Mapbook { get; init; } = new();
+    [JsonPropertyName("onyx")]         public OnyxConfig Onyx { get; init; } = new();
+}
+
 [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
 public class CnnContainersLoader(
     ISptLogger<CnnContainersLoader> logger,
+    ModHelper modHelper,
     DatabaseService databaseService,
     CustomItemService customItemService) : IOnLoad
 {
+    private ModConfig config = new();
+
     // Clone base - SICC organizational pouch (SimpleContainer, same parent node as our items)
     private const string CloneBase = "5d235bb686f77443f4331278";
 
@@ -210,22 +259,70 @@ public class CnnContainersLoader(
         ("5c0647fdd443bc2504c2d371", WoodenBoxId,    Roubles, 750000,  1), // Jaeger
     ];
 
+    // Map container IDs to their config entry
+    private ContainerConfig GetContainerConfig(string id) => id switch
+    {
+        GearBoxId      => config.GearBox,
+        ModCaseId      => config.ModCase,
+        AmmoBagId      => config.AmmoBag,
+        RecycledFakId  => config.RecycledFak,
+        SmallFridgeId  => config.SmallFridge,
+        SmallToolboxId => config.SmallToolbox,
+        WoodenBoxId    => config.WoodenBox,
+        _ => new ContainerConfig()
+    };
+
     public Task OnLoad()
     {
-        foreach (var def in Containers)
-            CreateContainer(def);
+        LoadConfig();
 
-        CreateMapbook();
-        CreateOnyx();
+        foreach (var def in Containers)
+        {
+            var cc = GetContainerConfig(def.Id);
+            if (!cc.Enabled) continue;
+            CreateContainer(def with { GridH = cc.GridH, GridV = cc.GridV });
+        }
+
+        if (config.Mapbook.Enabled) CreateMapbook();
+        if (config.Onyx.Enabled) CreateOnyx();
         AddLocales();
         AddToTraderAssorts();
         PatchSecureContainers();
         PatchSpecialSlots();
         ExcludeFromEquipment();
-        ExcludeMapbookFromModCase();
+        if (config.ModCase.Enabled && config.Mapbook.Enabled) ExcludeMapbookFromModCase();
 
         logger.Success("[CNN-Containers] Loaded successfully.");
         return Task.CompletedTask;
+    }
+
+    private void LoadConfig()
+    {
+        try
+        {
+            var modPath = modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
+            var configPath = System.IO.Path.Combine(modPath, "config", "config.jsonc");
+
+            if (!File.Exists(configPath))
+            {
+                logger.Warning("[CNN-Containers] config/config.jsonc not found, using defaults.");
+                return;
+            }
+
+            var json = File.ReadAllText(configPath);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };
+
+            config = JsonSerializer.Deserialize<ModConfig>(json, options) ?? new ModConfig();
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"[CNN-Containers] Failed to read config: {ex.Message}. Using defaults.");
+            config = new ModConfig();
+        }
     }
 
     private void CreateContainer(ContainerDef def)
@@ -433,9 +530,9 @@ public class CnnContainersLoader(
                 Prefab = new Prefab { Path = "assets/content/items/containers/RopesContainer.bundle" },
                 Grids = new List<Grid>
                 {
-                    MakeGrid("GridView (1)", 2, 3),
-                    MakeGrid("GridView (2)", 3, 4),
-                    MakeGrid("GridView (3)", 1, 2)
+                    MakeGrid("GridView (1)", config.Onyx.Grid1H, config.Onyx.Grid1V),
+                    MakeGrid("GridView (2)", config.Onyx.Grid2H, config.Onyx.Grid2V),
+                    MakeGrid("GridView (3)", config.Onyx.Grid3H, config.Onyx.Grid3V)
                 }
             }
         });
@@ -452,16 +549,23 @@ public class CnnContainersLoader(
                 if (data is null) return data;
                 foreach (var def in Containers)
                 {
+                    if (!GetContainerConfig(def.Id).Enabled) continue;
                     data[$"{def.Id} Name"] = def.Name;
                     data[$"{def.Id} ShortName"] = def.ShortName;
                     data[$"{def.Id} Description"] = def.Description;
                 }
-                data[$"{MapbookId} Name"] = "Secure Mapbook";
-                data[$"{MapbookId} ShortName"] = "Mapbook";
-                data[$"{MapbookId} Description"] = "A meticulously crafted book designed for storing and organizing maps.";
-                data[$"{OnyxId} Name"] = "Secure Container Onyx";
-                data[$"{OnyxId} ShortName"] = "OnyxSC";
-                data[$"{OnyxId} Description"] = "A secret Black Division invention for maximum storage - the Onyx secured container.";
+                if (config.Mapbook.Enabled)
+                {
+                    data[$"{MapbookId} Name"] = "Secure Mapbook";
+                    data[$"{MapbookId} ShortName"] = "Mapbook";
+                    data[$"{MapbookId} Description"] = "A meticulously crafted book designed for storing and organizing maps.";
+                }
+                if (config.Onyx.Enabled)
+                {
+                    data[$"{OnyxId} Name"] = "Secure Container Onyx";
+                    data[$"{OnyxId} ShortName"] = "OnyxSC";
+                    data[$"{OnyxId} Description"] = "A secret Black Division invention for maximum storage - the Onyx secured container.";
+                }
                 return data;
             });
         }
@@ -469,8 +573,17 @@ public class CnnContainersLoader(
 
     private void AddToTraderAssorts()
     {
-        foreach (var (traderId, itemId, currencyId, price, loyaltyLevel) in TraderAssorts)
+        foreach (var (traderId, itemId, currencyId, _, _) in TraderAssorts)
         {
+            // Look up config for this item (mapbook uses its own config type)
+            var isMapbook = itemId == MapbookId;
+            var cc = isMapbook ? null : GetContainerConfig(itemId);
+            var enabled = isMapbook ? config.Mapbook.Enabled : cc!.Enabled;
+            var cfgPrice = isMapbook ? config.Mapbook.Price : cc!.Price;
+            var cfgLoyalty = isMapbook ? config.Mapbook.LoyaltyLevel : cc!.LoyaltyLevel;
+
+            if (!enabled) continue;
+
             var assortItemId = new MongoId();
             var assort = databaseService.GetTrader(new MongoId(traderId))?.Assort;
             if (assort is null) continue;
@@ -492,14 +605,15 @@ public class CnnContainersLoader(
             {
                 new List<BarterScheme>
                 {
-                    new BarterScheme { Template = new MongoId(currencyId), Count = price }
+                    new BarterScheme { Template = new MongoId(currencyId), Count = cfgPrice }
                 }
             };
 
-            assort.LoyalLevelItems[assortItemId] = loyaltyLevel;
+            assort.LoyalLevelItems[assortItemId] = cfgLoyalty;
         }
 
-        // Onyx barter trade: Kappa + $85000 from Peacekeeper LL4
+        // Onyx barter trade: Kappa + dollars from Peacekeeper
+        if (config.Onyx.Enabled)
         {
             var onyxAssortId = new MongoId();
             var pkAssort = databaseService.GetTrader(new MongoId("5935c25fb3acc3127c3d8cd9"))?.Assort;
@@ -523,19 +637,28 @@ public class CnnContainersLoader(
                     new List<BarterScheme>
                     {
                         new BarterScheme { Template = new MongoId(OnyxCloneBase), Count = 1 },
-                        new BarterScheme { Template = new MongoId(Dollars), Count = 85000 }
+                        new BarterScheme { Template = new MongoId(Dollars), Count = config.Onyx.DollarPrice }
                     }
                 };
 
-                pkAssort.LoyalLevelItems[onyxAssortId] = 4;
+                pkAssort.LoyalLevelItems[onyxAssortId] = config.Onyx.LoyaltyLevel;
             }
         }
     }
 
+    private bool IsItemEnabled(string id) => id switch
+    {
+        MapbookId => config.Mapbook.Enabled,
+        OnyxId    => config.Onyx.Enabled,
+        _         => GetContainerConfig(id).Enabled
+    };
+
     // Add only portable items to the filter of every secure container.
     private void PatchSecureContainers()
     {
-        var newItemMongoIds = PortableItemIds.Select(id => new MongoId(id)).ToList();
+        var newItemMongoIds = PortableItemIds
+            .Where(IsItemEnabled)
+            .Select(id => new MongoId(id)).ToList();
 
         foreach (var (_, tpl) in databaseService.GetItems())
         {
@@ -568,6 +691,8 @@ public class CnnContainersLoader(
     // Add the mapbook to every special slot so it can be placed in the special slots.
     private void PatchSpecialSlots()
     {
+        if (!config.Mapbook.Enabled) return;
+
         var mapbookMongoId = new MongoId(MapbookId);
 
         foreach (var (_, tpl) in databaseService.GetItems())
@@ -598,7 +723,9 @@ public class CnnContainersLoader(
     // Prevent stash-only items from being placed in backpacks, vests, and pockets.
     private void ExcludeFromEquipment()
     {
-        var excludeIds = StashOnlyItemIds.Select(id => new MongoId(id)).ToHashSet();
+        var excludeIds = StashOnlyItemIds
+            .Where(IsItemEnabled)
+            .Select(id => new MongoId(id)).ToHashSet();
         string[] equipmentParents = [BackpackParentId, VestParentId, PocketsParentId];
 
         foreach (var (_, tpl) in databaseService.GetItems())
