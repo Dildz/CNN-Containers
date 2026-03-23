@@ -1,12 +1,12 @@
 Port of [CNN-Containers Re-Upload](https://forge.sp-tarkov.com/mod/2167/cnn-containers-re-upload) mod, for SPT v4.0.X
 
-Full rework of the CNN-CONTAINERS mod (v4)
+Full rework of the CNN-CONTAINERS mod (v4) with additional cases added. Cases can now be configured via a config file.
 
 
 Installation:
 Download and Extract: Download the mod package zip and extract it into your SPT directory.
 
-Note: If you had a previous version of this mod installed, go to the SPT launcher's settings and click "Clean Temp Files" before launching.
+**Note:** If you had a previous version of this mod installed, go to the SPT launcher's settings and click "Clean Temp Files" before launching.
 
 
 Configuration:
