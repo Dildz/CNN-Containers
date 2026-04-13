@@ -19,7 +19,7 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = "CNN-Containers";
     public override string Author { get; init; } = "Cannuccia";
     public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("4.2.2");
+    public override SemanticVersioning.Version Version { get; init; } = new("4.3.0");
     public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
@@ -32,22 +32,33 @@ public record ContainerConfig
 {
     [JsonPropertyName("enabled")]     public bool Enabled { get; init; } = true;
     [JsonPropertyName("price")]       public int Price { get; init; }
+    [JsonPropertyName("fleaPrice")]   public int FleaPrice { get; init; }
     [JsonPropertyName("loyaltyLevel")] public int LoyaltyLevel { get; init; } = 1;
     [JsonPropertyName("gridH")]       public int GridH { get; init; }
     [JsonPropertyName("gridV")]       public int GridV { get; init; }
+    [JsonPropertyName("extraFilters")]         public string[]? ExtraFilters { get; init; }
+    [JsonPropertyName("extraExcludedFilters")] public string[]? ExtraExcludedFilters { get; init; }
+    [JsonPropertyName("name")]        public string? Name { get; init; }
+    [JsonPropertyName("shortName")]   public string? ShortName { get; init; }
+    [JsonPropertyName("description")] public string? Description { get; init; }
 }
 
 public record MapbookConfig
 {
     [JsonPropertyName("enabled")]     public bool Enabled { get; init; } = true;
-    [JsonPropertyName("price")]       public int Price { get; init; } = 48500;
-    [JsonPropertyName("loyaltyLevel")] public int LoyaltyLevel { get; init; } = 1;
+    [JsonPropertyName("price")]       public int Price { get; init; } = 65000;
+    [JsonPropertyName("fleaPrice")]   public int FleaPrice { get; init; }
+    [JsonPropertyName("loyaltyLevel")] public int LoyaltyLevel { get; init; } = 2;
+    [JsonPropertyName("name")]        public string? Name { get; init; }
+    [JsonPropertyName("shortName")]   public string? ShortName { get; init; }
+    [JsonPropertyName("description")] public string? Description { get; init; }
 }
 
 public record OnyxConfig
 {
     [JsonPropertyName("enabled")]      public bool Enabled { get; init; } = true;
     [JsonPropertyName("dollarPrice")]  public int DollarPrice { get; init; } = 85000;
+    [JsonPropertyName("fleaPrice")]    public int FleaPrice { get; init; }
     [JsonPropertyName("loyaltyLevel")] public int LoyaltyLevel { get; init; } = 4;
     [JsonPropertyName("grid1H")]       public int Grid1H { get; init; } = 2;
     [JsonPropertyName("grid1V")]       public int Grid1V { get; init; } = 3;
@@ -55,17 +66,22 @@ public record OnyxConfig
     [JsonPropertyName("grid2V")]       public int Grid2V { get; init; } = 4;
     [JsonPropertyName("grid3H")]       public int Grid3H { get; init; } = 1;
     [JsonPropertyName("grid3V")]       public int Grid3V { get; init; } = 2;
+    [JsonPropertyName("extraFilters")]         public string[]? ExtraFilters { get; init; }
+    [JsonPropertyName("extraExcludedFilters")] public string[]? ExtraExcludedFilters { get; init; }
+    [JsonPropertyName("name")]        public string? Name { get; init; }
+    [JsonPropertyName("shortName")]   public string? ShortName { get; init; }
+    [JsonPropertyName("description")] public string? Description { get; init; }
 }
 
 public record ModConfig
 {
-    [JsonPropertyName("gearBox")]      public ContainerConfig GearBox { get; init; } = new() { Price = 1118054, GridH = 12, GridV = 8 };
-    [JsonPropertyName("modCase")]      public ContainerConfig ModCase { get; init; } = new() { Price = 434, GridH = 7, GridV = 7 };
-    [JsonPropertyName("ammoBag")]      public ContainerConfig AmmoBag { get; init; } = new() { Price = 36980, GridH = 2, GridV = 2 };
-    [JsonPropertyName("recycledFak")]  public ContainerConfig RecycledFak { get; init; } = new() { Price = 52572, GridH = 3, GridV = 3 };
-    [JsonPropertyName("smallFridge")]  public ContainerConfig SmallFridge { get; init; } = new() { Price = 20690, GridH = 4, GridV = 4 };
-    [JsonPropertyName("smallToolbox")] public ContainerConfig SmallToolbox { get; init; } = new() { Price = 118, GridH = 6, GridV = 4 };
-    [JsonPropertyName("woodenBox")]    public ContainerConfig WoodenBox { get; init; } = new() { Price = 750000, GridH = 12, GridV = 8 };
+    [JsonPropertyName("gearBox")]      public ContainerConfig GearBox { get; init; } = new() { Price = 850000, LoyaltyLevel = 3, GridH = 10, GridV = 8 };
+    [JsonPropertyName("modCase")]      public ContainerConfig ModCase { get; init; } = new() { Price = 1200, LoyaltyLevel = 2, GridH = 6, GridV = 5 };
+    [JsonPropertyName("ammoBag")]      public ContainerConfig AmmoBag { get; init; } = new() { Price = 75000, GridH = 2, GridV = 2 };
+    [JsonPropertyName("recycledFak")]  public ContainerConfig RecycledFak { get; init; } = new() { Price = 85000, GridH = 3, GridV = 3 };
+    [JsonPropertyName("smallFridge")]  public ContainerConfig SmallFridge { get; init; } = new() { Price = 38000, GridH = 2, GridV = 3 };
+    [JsonPropertyName("smallToolbox")] public ContainerConfig SmallToolbox { get; init; } = new() { Price = 500, GridH = 4, GridV = 6 };
+    [JsonPropertyName("woodenBox")]    public ContainerConfig WoodenBox { get; init; } = new() { Price = 1000000, LoyaltyLevel = 2, GridH = 8, GridV = 6 };
     [JsonPropertyName("mapbook")]      public MapbookConfig Mapbook { get; init; } = new();
     [JsonPropertyName("onyx")]         public OnyxConfig Onyx { get; init; } = new();
 }
@@ -78,6 +94,7 @@ public class CnnContainersLoader(
     CustomItemService customItemService) : IOnLoad
 {
     private ModConfig config = new();
+    private ContainerDef[] _resolvedContainers = [];
 
     // Clone base - SICC organizational pouch (SimpleContainer, same parent node as our items)
     private const string CloneBase = "5d235bb686f77443f4331278";
@@ -90,6 +107,10 @@ public class CnnContainersLoader(
 
     // Secure container parent node - used to find all secure containers to patch
     private const string SecureContainerParentId = "5448bf274bdc2dfc2f8b456a";
+
+    // Vanilla containers whose filters need patching to accept our custom items
+    private const string ItemsCaseId      = "59fb042886f7746c5005a7b2";
+    private const string ThiccItemsCaseId = "5c0a840b86f7742ffa4f2482";
 
     // Equipment parent nodes - used to exclude stash-only items from player inventory
     private const string BackpackParentId = "5448e53e4bdc2d60728b4567";
@@ -121,8 +142,9 @@ public class CnnContainersLoader(
 
     // Onyx secure container - multi-grid secure container cloned from Kappa
     private const string OnyxId = "674a33573fef1c2943025680";
-    private const string OnyxCloneBase = "5c093ca986f7740a1867ab12";      // Kappa
-    private const string OnyxHandbookParentId = "5b5f6fd286f774093f2ed3c4"; // Secure Containers handbook
+    private const string OnyxCloneBase = "5c093ca986f7740a1867ab12";     // Kappa
+    private const string DesecratedKappaId = "676008db84e242067d0dc4c9"; // Desecrated Kappa
+    private const string OnyxHandbookParentId = "5b5f6fd286f774093f2ecf0d"; // Secure Containers handbook category (matches Kappa's handbook.ParentId)
     private const string OnyxFilterInclude = "54009119af1c881c07000029";    // Item base category
     private const string OnyxFilterExclude = "5447e1d04bdc2dff2f8b4567";    // Weapons
 
@@ -143,13 +165,13 @@ public class CnnContainersLoader(
         ("Labyrinth",   "68f1ad32317cc52f4c0b6fae"),
     ];
 
-    // Items allowed in both stash AND player inventory (backpacks, vests, secure containers)
+    // Items allowed in both stash AND player inventory
     private static readonly string[] PortableItemIds =
     [
         AmmoBagId, RecycledFakId, SmallFridgeId, MapbookId
     ];
 
-    // Items restricted to stash only - too bulky for player inventory
+    // Items restricted to stash only
     private static readonly string[] StashOnlyItemIds =
     [
         GearBoxId, ModCaseId, SmallToolboxId, WoodenBoxId
@@ -166,14 +188,16 @@ public class CnnContainersLoader(
         string BackgroundColor,
         string BundlePath,
         int HandbookPrice,
+        int FleaPrice = 0,
         bool CanRequireOnRagfair = false,
-        int DiscardLimit = 0);
+        int DiscardLimit = 0,
+        string[]? ExcludedFilterIds = null);
 
     private static readonly ContainerDef[] Containers =
     [
         new(GearBoxId,
             "Gear Box", "G-BOX", "A gear storage box.",
-            5, 3, 12, 8,
+            5, 3, 10, 8,
             [
                 "57bef4c42459772e8d35a53b", // Armored equipment
                 "5448e54d4bdc2dcc718b4568", // Armor vests
@@ -187,15 +211,15 @@ public class CnnContainersLoader(
             ],
             11.4, "grey",
             "assets/content/items/containers/item_container_gearbox.bundle",
-            1308123, CanRequireOnRagfair: true),
+            995000, CanRequireOnRagfair: true),
 
         new(ModCaseId,
             "Mod Case", "M-CASE", "A weapon mod storage case.",
-            3, 2, 7, 7,
+            3, 2, 6, 5,
             ["5448fe124bdc2da5018b4567"], // Weapon mods
             2.7, "grey",
             "assets/content/items/containers/item_container_modbox.bundle",
-            51284),
+            197000),
 
         new(AmmoBagId,
             "Recycled Ammo Bag", "A-BAG", "A recycled IFAK to hold ammunition.",
@@ -206,7 +230,7 @@ public class CnnContainersLoader(
             ],
             0.4, "grey",
             "assets/content/items/containers/recycled_ammo_bag.bundle",
-            43266, DiscardLimit: 1),
+            88000, DiscardLimit: 1),
 
         new(RecycledFakId,
             "Recycled First Aid Kit", "R-FAK",
@@ -218,45 +242,46 @@ public class CnnContainersLoader(
             ],
             0.4, "orange",
             "assets/content/items/containers/recycled_fak.bundle",
-            61509),
+            100000),
 
         new(SmallFridgeId,
             "Small Portable Fridge", "SP-F", "A small portable fridge.",
-            1, 1, 4, 4,
+            1, 1, 2, 3,
             ["543be6674bdc2df1348b4569"], // Food and drink
-            2.36, "black",
+            0.5, "black",
             "assets/content/items/containers/small_portable_fridge.bundle",
-            17684),
+            45000),
 
         new(SmallToolboxId,
             "Small Toolbox", "S-TB", "A small toolbox, probably stolen from a Scav.",
-            3, 2, 6, 4,
+            3, 2, 4, 6,
             ["5448eb774bdc2d0a728b4567"], // Tools
             3.6, "blue",
             "assets/content/items/containers/small_toolbox.bundle",
-            14045),
+            76000),
 
         new(WoodenBoxId,
             "Ruined Wooden Box", "RW-BOX",
             "A worn-out wooden crate, still sturdy enough to store just about anything.",
-            5, 3, 12, 8,
+            5, 3, 8, 6,
             ["54009119af1c881c07000029"], // Item (accepts everything)
             11.4, "grey",
             "assets/content/items/containers/ruined_wooden_box.bundle",
-            750000),
+            1170000,
+            ExcludedFilterIds: [WoodenBoxId]), // Never allow wooden boxes inside wooden boxes
     ];
 
-    // Trader assort entries: one item per trader, matching v3 prices/currencies exactly
+    // Trader assort entries: one item per trader, matching v3 prices/currencies
     private static readonly (string TraderId, string ItemId, string CurrencyId, int Price, int LoyaltyLevel)[] TraderAssorts =
     [
-        ("54cb50c76803fa8b248b4571", AmmoBagId,      Roubles, 36980,   1), // Prapor
-        ("54cb57776803fa99248b456e", RecycledFakId,  Roubles, 52572,   1), // Therapist
-        ("54cb57776803fa99248b456e", MapbookId,      Roubles, 48500,   1), // Therapist
-        ("5935c25fb3acc3127c3d8cd9", ModCaseId,      Dollars, 434,     1), // Peacekeeper
-        ("5a7c2eca46aef81a7ca2145d", SmallToolboxId, Euros,   118,     1), // Ragman
-        ("5ac3b934156ae10c4430e83c", GearBoxId,      Roubles, 1118054, 1), // Mechanic
-        ("5c0647fdd443bc2504c2d371", SmallFridgeId,  Roubles, 20690,   1), // Jaeger
-        ("5c0647fdd443bc2504c2d371", WoodenBoxId,    Roubles, 750000,  1), // Jaeger
+        ("54cb50c76803fa8b248b4571", AmmoBagId,      Roubles, 75000,   1), // Prapor
+        ("54cb57776803fa99248b456e", RecycledFakId,  Roubles, 85000,   1), // Therapist
+        ("54cb57776803fa99248b456e", MapbookId,      Roubles, 65000,   2), // Therapist
+        ("5935c25fb3acc3127c3d8cd9", ModCaseId,      Dollars, 1200,    2), // Peacekeeper
+        ("58330581ace78e27b8b10cee", SmallToolboxId, Euros,   500,     1), // Skier
+        ("5ac3b934156ae10c4430e83c", GearBoxId,      Roubles, 850000,  3), // Mechanic
+        ("5c0647fdd443bc2504c2d371", SmallFridgeId,  Roubles, 38000,   1), // Jaeger
+        ("5c0647fdd443bc2504c2d371", WoodenBoxId,    Roubles, 1000000, 2), // Jaeger
     ];
 
     // Map container IDs to their config entry
@@ -272,15 +297,44 @@ public class CnnContainersLoader(
         _ => new ContainerConfig()
     };
 
+    // Apply config overrides (grid size, flea price, extra filters, and optional locale strings)
+    private ContainerDef ResolveContainer(ContainerDef def)
+    {
+        var cc = GetContainerConfig(def.Id);
+        var filterIds = cc.ExtraFilters is { Length: > 0 }
+            ? [..def.FilterIds, ..cc.ExtraFilters]
+            : def.FilterIds;
+
+        // Merge baseline excludes (hard-coded on the ContainerDef) with any user-added excludes from config.
+        // This keeps defaults like "wooden box cannot hold wooden boxes" in place even if the user adds their own list.
+        var baselineExcluded = def.ExcludedFilterIds ?? Array.Empty<string>();
+        var configExcluded = cc.ExtraExcludedFilters ?? Array.Empty<string>();
+        var excludedFilterIds = baselineExcluded.Length == 0 && configExcluded.Length == 0
+            ? null
+            : baselineExcluded.Concat(configExcluded).Distinct().ToArray();
+
+        return def with
+        {
+            GridH             = cc.GridH,
+            GridV             = cc.GridV,
+            FleaPrice         = cc.FleaPrice,
+            FilterIds         = filterIds,
+            ExcludedFilterIds = excludedFilterIds,
+            Name              = cc.Name        ?? def.Name,
+            ShortName         = cc.ShortName   ?? def.ShortName,
+            Description       = cc.Description ?? def.Description
+        };
+    }
+
     public Task OnLoad()
     {
         LoadConfig();
+        _resolvedContainers = [..Containers.Select(ResolveContainer)];
 
-        foreach (var def in Containers)
+        foreach (var def in _resolvedContainers)
         {
-            var cc = GetContainerConfig(def.Id);
-            if (!cc.Enabled) continue;
-            CreateContainer(def with { GridH = cc.GridH, GridV = cc.GridV });
+            if (!GetContainerConfig(def.Id).Enabled) continue;
+            CreateContainer(def);
         }
 
         if (config.Mapbook.Enabled) CreateMapbook();
@@ -290,6 +344,7 @@ public class CnnContainersLoader(
         PatchSecureContainers();
         PatchSpecialSlots();
         ExcludeFromEquipment();
+        PatchVanillaContainers();
         if (config.ModCase.Enabled && config.Mapbook.Enabled) ExcludeMapbookFromModCase();
 
         logger.Success("[CNN-Containers] Loaded successfully.");
@@ -312,6 +367,7 @@ public class CnnContainersLoader(
             var json = File.ReadAllText(configPath);
             var options = new JsonSerializerOptions
             {
+                AllowTrailingCommas = true,
                 PropertyNameCaseInsensitive = true,
                 ReadCommentHandling = JsonCommentHandling.Skip
             };
@@ -327,6 +383,8 @@ public class CnnContainersLoader(
 
     private void CreateContainer(ContainerDef def)
     {
+        var fleaPrice = def.FleaPrice > 0 ? def.FleaPrice : def.HandbookPrice;
+
         customItemService.CreateItemFromClone(new NewItemFromCloneDetails
         {
             ItemTplToClone = CloneBase,
@@ -334,7 +392,7 @@ public class CnnContainersLoader(
             ParentId = ContainerParentId,
             HandbookParentId = HandbookParentId,
             HandbookPriceRoubles = def.HandbookPrice,
-            FleaPriceRoubles = def.HandbookPrice,
+            FleaPriceRoubles = fleaPrice,
             Locales = new Dictionary<string, LocaleDetails>
             {
                 {
@@ -387,7 +445,9 @@ public class CnnContainersLoader(
                                 {
                                     Filter = new HashSet<MongoId>(
                                         def.FilterIds.Select(id => new MongoId(id))),
-                                    ExcludedFilter = new HashSet<MongoId>()
+                                    ExcludedFilter = def.ExcludedFilterIds is { Length: > 0 }
+                                        ? new HashSet<MongoId>(def.ExcludedFilterIds.Select(id => new MongoId(id)))
+                                        : new HashSet<MongoId>()
                                 }
                             }
                         }
@@ -424,30 +484,35 @@ public class CnnContainersLoader(
             });
         }
 
+        var mapbookName        = config.Mapbook.Name        ?? "Secure Mapbook";
+        var mapbookShortName   = config.Mapbook.ShortName   ?? "Mapbook";
+        var mapbookDescription = config.Mapbook.Description ?? "A meticulously crafted book designed for storing and organizing maps.";
+        var mapbookFleaPrice   = config.Mapbook.FleaPrice > 0 ? config.Mapbook.FleaPrice : 76000;
+
         customItemService.CreateItemFromClone(new NewItemFromCloneDetails
         {
             ItemTplToClone = MapbookCloneBase,
             NewId = MapbookId,
             ParentId = MapbookParentId,
             HandbookParentId = MapbookHandbookParentId,
-            HandbookPriceRoubles = 48500,
-            FleaPriceRoubles = 48500,
+            HandbookPriceRoubles = 76000,
+            FleaPriceRoubles = mapbookFleaPrice,
             Locales = new Dictionary<string, LocaleDetails>
             {
                 {
                     "en", new LocaleDetails
                     {
-                        Name = "Secure Mapbook",
-                        ShortName = "Mapbook",
-                        Description = "A meticulously crafted book designed for storing and organizing maps."
+                        Name = mapbookName,
+                        ShortName = mapbookShortName,
+                        Description = mapbookDescription
                     }
                 }
             },
             OverrideProperties = new TemplateItemProperties
             {
-                Name = "Secure Mapbook",
-                ShortName = "Mapbook",
-                Description = "A meticulously crafted book designed for storing and organizing maps.",
+                Name = mapbookName,
+                ShortName = mapbookShortName,
+                Description = mapbookDescription,
                 Width = 1,
                 Height = 2,
                 Weight = 0.5f,
@@ -468,13 +533,44 @@ public class CnnContainersLoader(
 
     private void CreateOnyx()
     {
+        // Inherit Kappa's exact grid filter (19-entry allow-list + 112-entry exclusion list)
+        // so Onyx has the same item restrictions as a normal secure container. Cloning Kappa
+        // would inherit these automatically, but OverrideProperties.Grids below replaces the
+        // inherited grids with custom-sized ones, so we have to copy the filter explicitly.
+        // Copy into new HashSets so ExtraFilters / ExtraExcludedFilters don't mutate Kappa.
+        HashSet<MongoId> includeIds;
+        HashSet<MongoId> excludeIds;
+
+        var items = databaseService.GetItems();
+        var kappaTpl = items.TryGetValue(new MongoId(OnyxCloneBase), out var tpl) ? tpl : null;
+        var kappaFilter = kappaTpl?.Properties?.Grids?.FirstOrDefault()?.Properties?.Filters?.FirstOrDefault();
+
+        if (kappaFilter?.Filter is { Count: > 0 } kf)
+        {
+            includeIds = new HashSet<MongoId>(kf);
+            excludeIds = kappaFilter.ExcludedFilter is { } ke
+                ? new HashSet<MongoId>(ke)
+                : new HashSet<MongoId>();
+        }
+        else
+        {
+            // Fallback if Kappa's filter shape ever changes: allow-all minus weapons.
+            logger.Warning("[CNN-Containers] Could not read Kappa filter - Onyx falling back to allow-all minus weapons.");
+            includeIds = new HashSet<MongoId> { new MongoId(OnyxFilterInclude) };
+            excludeIds = new HashSet<MongoId> { new MongoId(OnyxFilterExclude) };
+        }
+
+        if (config.Onyx.ExtraFilters is { Length: > 0 })
+            foreach (var id in config.Onyx.ExtraFilters)
+                includeIds.Add(new MongoId(id));
+
+        if (config.Onyx.ExtraExcludedFilters is { Length: > 0 })
+            foreach (var id in config.Onyx.ExtraExcludedFilters)
+                excludeIds.Add(new MongoId(id));
+
         var gridFilter = new List<GridFilter>
         {
-            new GridFilter
-            {
-                Filter = new HashSet<MongoId> { new MongoId(OnyxFilterInclude) },
-                ExcludedFilter = new HashSet<MongoId> { new MongoId(OnyxFilterExclude) }
-            }
+            new GridFilter { Filter = includeIds, ExcludedFilter = excludeIds }
         };
 
         Grid MakeGrid(string name, int cellsH, int cellsV) => new Grid
@@ -495,6 +591,11 @@ public class CnnContainersLoader(
             }
         };
 
+        var onyxName        = config.Onyx.Name        ?? "Secure Container Onyx";
+        var onyxShortName   = config.Onyx.ShortName   ?? "OnyxSC";
+        var onyxDescription = config.Onyx.Description ?? "A secret Black Division invention for maximum storage - the Onyx secured container.";
+        var onyxFleaPrice   = config.Onyx.FleaPrice > 0 ? config.Onyx.FleaPrice : 12999999;
+
         customItemService.CreateItemFromClone(new NewItemFromCloneDetails
         {
             ItemTplToClone = OnyxCloneBase,
@@ -502,23 +603,23 @@ public class CnnContainersLoader(
             ParentId = SecureContainerParentId,
             HandbookParentId = OnyxHandbookParentId,
             HandbookPriceRoubles = 12999999,
-            FleaPriceRoubles = 12999999,
+            FleaPriceRoubles = onyxFleaPrice,
             Locales = new Dictionary<string, LocaleDetails>
             {
                 {
                     "en", new LocaleDetails
                     {
-                        Name = "Secure Container Onyx",
-                        ShortName = "OnyxSC",
-                        Description = "A secret Black Division invention for maximum storage - the Onyx secured container."
+                        Name = onyxName,
+                        ShortName = onyxShortName,
+                        Description = onyxDescription
                     }
                 }
             },
             OverrideProperties = new TemplateItemProperties
             {
-                Name = "Secure Container Onyx",
-                ShortName = "OnyxSC",
-                Description = "A secret Black Division invention for maximum storage - the Onyx secured container.",
+                Name = onyxName,
+                ShortName = onyxShortName,
+                Description = onyxDescription,
                 CanSellOnRagfair = false,
                 CanRequireOnRagfair = false,
                 ExaminedByDefault = true,
@@ -547,7 +648,7 @@ public class CnnContainersLoader(
             localeKvP.AddTransformer(data =>
             {
                 if (data is null) return data;
-                foreach (var def in Containers)
+                foreach (var def in _resolvedContainers)
                 {
                     if (!GetContainerConfig(def.Id).Enabled) continue;
                     data[$"{def.Id} Name"] = def.Name;
@@ -556,15 +657,15 @@ public class CnnContainersLoader(
                 }
                 if (config.Mapbook.Enabled)
                 {
-                    data[$"{MapbookId} Name"] = "Secure Mapbook";
-                    data[$"{MapbookId} ShortName"] = "Mapbook";
-                    data[$"{MapbookId} Description"] = "A meticulously crafted book designed for storing and organizing maps.";
+                    data[$"{MapbookId} Name"] = config.Mapbook.Name        ?? "Secure Mapbook";
+                    data[$"{MapbookId} ShortName"] = config.Mapbook.ShortName   ?? "Mapbook";
+                    data[$"{MapbookId} Description"] = config.Mapbook.Description ?? "A meticulously crafted book designed for storing and organizing maps.";
                 }
                 if (config.Onyx.Enabled)
                 {
-                    data[$"{OnyxId} Name"] = "Secure Container Onyx";
-                    data[$"{OnyxId} ShortName"] = "OnyxSC";
-                    data[$"{OnyxId} Description"] = "A secret Black Division invention for maximum storage - the Onyx secured container.";
+                    data[$"{OnyxId} Name"] = config.Onyx.Name        ?? "Secure Container Onyx";
+                    data[$"{OnyxId} ShortName"] = config.Onyx.ShortName   ?? "OnyxSC";
+                    data[$"{OnyxId} Description"] = config.Onyx.Description ?? "A secret Black Division invention for maximum storage - the Onyx secured container.";
                 }
                 return data;
             });
@@ -612,16 +713,17 @@ public class CnnContainersLoader(
             assort.LoyalLevelItems[assortItemId] = cfgLoyalty;
         }
 
-        // Onyx barter trade: Kappa + dollars from Peacekeeper
+        // Onyx barter trades: Kappa + dollars OR Desecrated Kappa + dollars from Peacekeeper
         if (config.Onyx.Enabled)
         {
-            var onyxAssortId = new MongoId();
             var pkAssort = databaseService.GetTrader(new MongoId("5935c25fb3acc3127c3d8cd9"))?.Assort;
             if (pkAssort is not null)
             {
+                // Barter 1: Regular Kappa + Dollars
+                var onyxAssortId1 = new MongoId();
                 pkAssort.Items.Add(new Item
                 {
-                    Id = onyxAssortId,
+                    Id = onyxAssortId1,
                     Template = new MongoId(OnyxId),
                     ParentId = "hideout",
                     SlotId = "hideout",
@@ -632,7 +734,7 @@ public class CnnContainersLoader(
                     }
                 });
 
-                pkAssort.BarterScheme[onyxAssortId] = new List<List<BarterScheme>>
+                pkAssort.BarterScheme[onyxAssortId1] = new List<List<BarterScheme>>
                 {
                     new List<BarterScheme>
                     {
@@ -641,7 +743,33 @@ public class CnnContainersLoader(
                     }
                 };
 
-                pkAssort.LoyalLevelItems[onyxAssortId] = config.Onyx.LoyaltyLevel;
+                pkAssort.LoyalLevelItems[onyxAssortId1] = config.Onyx.LoyaltyLevel;
+
+                // Barter 2: Desecrated Kappa + Dollars
+                var onyxAssortId2 = new MongoId();
+                pkAssort.Items.Add(new Item
+                {
+                    Id = onyxAssortId2,
+                    Template = new MongoId(OnyxId),
+                    ParentId = "hideout",
+                    SlotId = "hideout",
+                    Upd = new Upd
+                    {
+                        UnlimitedCount = true,
+                        StackObjectsCount = 999
+                    }
+                });
+
+                pkAssort.BarterScheme[onyxAssortId2] = new List<List<BarterScheme>>
+                {
+                    new List<BarterScheme>
+                    {
+                        new BarterScheme { Template = new MongoId(DesecratedKappaId), Count = 1 },
+                        new BarterScheme { Template = new MongoId(Dollars), Count = config.Onyx.DollarPrice }
+                    }
+                };
+
+                pkAssort.LoyalLevelItems[onyxAssortId2] = config.Onyx.LoyaltyLevel;
             }
         }
     }
@@ -654,8 +782,10 @@ public class CnnContainersLoader(
     };
 
     // Add only portable items to the filter of every secure container.
+    // Skip "allow-all" containers - bots were spawning with empty secure containers.
     private void PatchSecureContainers()
     {
+        var itemRootId = new MongoId(OnyxFilterInclude); // "54009119af1c881c07000029" - BaseClasses.ITEM
         var newItemMongoIds = PortableItemIds
             .Where(IsItemEnabled)
             .Select(id => new MongoId(id)).ToList();
@@ -670,20 +800,19 @@ public class CnnContainersLoader(
 
             foreach (var grid in grids)
             {
-                grid.Properties ??= new GridProperties();
-
-                var filterList = grid.Properties.Filters?.ToList() ?? new List<GridFilter>();
-
-                if (!filterList.Any())
-                    filterList.Add(new GridFilter { Filter = new HashSet<MongoId>() });
+                var filterList = grid.Properties?.Filters;
+                if (filterList == null || !filterList.Any()) continue;
 
                 var filter = filterList.First();
                 filter.Filter ??= new HashSet<MongoId>();
 
+                // Leave allow-all containers alone - adding entries would break the
+                // fast-path and cause bots to spawn with empty secure containers.
+                if (filter.Filter.Contains(itemRootId))
+                    continue;
+
                 foreach (var id in newItemMongoIds)
                     filter.Filter.Add(id);
-
-                grid.Properties.Filters = filterList;
             }
         }
     }
@@ -738,24 +867,53 @@ public class CnnContainersLoader(
 
             foreach (var grid in grids)
             {
-                grid.Properties ??= new GridProperties();
-
-                var filterList = grid.Properties.Filters?.ToList() ?? new List<GridFilter>();
-
-                if (!filterList.Any())
-                    filterList.Add(new GridFilter
-                    {
-                        Filter = new HashSet<MongoId>(),
-                        ExcludedFilter = new HashSet<MongoId>()
-                    });
+                var filterList = grid.Properties?.Filters;
+                if (filterList == null || !filterList.Any()) continue;
 
                 var filter = filterList.First();
                 filter.ExcludedFilter ??= new HashSet<MongoId>();
 
                 foreach (var id in excludeIds)
                     filter.ExcludedFilter.Add(id);
+            }
+        }
+    }
 
-                grid.Properties.Filters = filterList;
+    // The Items Case and THICC Items Case use explicit allow-lists, so our
+    // smaller container IDs must be added to their filters individually.
+    // Gear Box and Wooden Box are excluded.
+    private static readonly string[] VanillaCaseCompatibleIds =
+    [
+        ModCaseId, AmmoBagId, RecycledFakId, SmallFridgeId, SmallToolboxId, MapbookId
+    ];
+
+    private void PatchVanillaContainers()
+    {
+        var patchIds = VanillaCaseCompatibleIds
+            .Where(IsItemEnabled)
+            .Select(id => new MongoId(id))
+            .ToList();
+
+        if (!patchIds.Any()) return;
+
+        string[] vanillaCaseIds = [ItemsCaseId, ThiccItemsCaseId];
+        var items = databaseService.GetItems();
+
+        foreach (var caseId in vanillaCaseIds)
+        {
+            if (!items.TryGetValue(new MongoId(caseId), out var caseTpl)) continue;
+
+            var grids = caseTpl.Properties?.Grids;
+            if (grids == null) continue;
+
+            foreach (var grid in grids)
+            {
+                var filter = grid.Properties?.Filters?.FirstOrDefault();
+                if (filter == null) continue;
+
+                filter.Filter ??= new HashSet<MongoId>();
+                foreach (var id in patchIds)
+                    filter.Filter.Add(id);
             }
         }
     }

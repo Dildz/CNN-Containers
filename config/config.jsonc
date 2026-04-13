@@ -1,33 +1,164 @@
 {
-    // CNN-Containers Configuration
-    // Enable or disable individual containers, adjust prices, trader loyalty levels, and grid sizes.
-    // Prices are in the container's native currency (roubles, dollars, or euros depending on the trader).
-    // Disabled containers won't be created or appear at traders.
+    // ==========================================
+    //  CNN-Containers Configuration
+    // ==========================================
     //
-    // WARNING: Disabling a container or changing its grid size after you've already used it in your
-    // profile (items stored inside) can cause profile corruption or item loss.
-    // Only change sizes after emptying the affected containers.
-    // Delete a case from your profile first if you want to disable it after using it.
+    // enabled       - set to false to remove a container from the game entirely
+    // price         - trader price (roubles, dollars, or euros depending on the trader)
+    // loyaltyLevel  - trader loyalty level required to buy (1-4)
+    // gridH / gridV - internal grid size (columns x rows)
+    //
+    // Some optional settings are commented out (//) below each container and will revert to their default values.
+    // To use one, just remove the // at the start of the line and edit the value.
+    //
+    // Use https://db.sp-tarkov.com/ to search for items to add to container extraFilters or extraExcludedFilters.
+    // The "_id":string or "parentId":string values are used depending on whether you want to allow/ban a specific item or an entire category of items.
+    //
+    // fleaPrice             - flea market price in roubles (0 or commented out = use default handbook price)
+    // extraFilters          - extra allowed item category or item IDs - can add multiple IDs followed by a comma, or just one ID in the array.
+    //                         (e.g. for mods like Pack 'n' Strap - the parent item ID "6815465859b8c6ff13f94026" is added to the Gear Box's extraFilters)
+    // extraExcludedFilters  - item IDs or parent category IDs to DISALLOW. Useful for the wooden box (which accepts everything by default)
+    //                         to block specific items like the junk box, items case, weapons case, gear box, etc.
+    // name                  - override the container's display name
+    // shortName             - override the short name shown in inventory
+    // description           - override the description text
+    //
+    // WARNING: Disabling a container or changing its grid size after you've stored items
+    // inside it can cause profile corruption or item loss.
+    // Always empty a container first before changing these settings.
+    
 
-    "gearBox":      { "enabled": true, "price": 1118054, "loyaltyLevel": 1, "gridH": 12, "gridV": 10 },
-    "modCase":      { "enabled": true, "price": 434,     "loyaltyLevel": 1, "gridH": 7,  "gridV": 7 },
-    "ammoBag":      { "enabled": true, "price": 36980,   "loyaltyLevel": 1, "gridH": 2,  "gridV": 2 },
-    "recycledFak":  { "enabled": true, "price": 52572,   "loyaltyLevel": 1, "gridH": 3,  "gridV": 3 },
-    "smallFridge":  { "enabled": true, "price": 20690,   "loyaltyLevel": 1, "gridH": 4,  "gridV": 4 },
-    "smallToolbox": { "enabled": true, "price": 118,     "loyaltyLevel": 1, "gridH": 6,  "gridV": 4 },
-    "woodenBox":    { "enabled": true, "price": 752047,  "loyaltyLevel": 1, "gridH": 12, "gridV": 8 },
 
-    // Mapbook is slot-based (one slot per map), so no grid size options
-    "mapbook":      { "enabled": true, "price": 48523,   "loyaltyLevel": 1 },
+    // --- Gear Box / Ragman (roubles) ---
+    // Pre-loaded the extaFilters with the Pack 'n' Strap mod's parent item ID as it's quite a popular mod,
+    // add any additional IDs using commas.
+    "gearBox": {
+        "enabled": true,
+        "price": 850000,
+        "loyaltyLevel": 3,
+        "gridH": 10,
+        "gridV": 8,
+        //"fleaPrice": 0,
+        "extraFilters": ["6815465859b8c6ff13f94026"],
+        //"name": "Gear Box",
+        //"shortName": "G-BOX",
+        //"description": "A gear storage box.",
+    },
 
-    // Onyx uses a barter trade (Kappa + dollars) from Peacekeeper, so dollarPrice instead of price
-    // Each of the 3 grids can be resized independently
+    // --- Mod Case / Peacekeeper (dollars) ---
+    "modCase": {
+        "enabled": true,
+        "price": 1200,
+        "loyaltyLevel": 2,
+        "gridH": 6,
+        "gridV": 5,
+        //"fleaPrice": 0,
+        //"extraFilters": ["IDs_go_here"],
+        //"name": "Mod Case",
+        //"shortName": "M-CASE",
+        //"description": "A weapon mod storage case.",
+    },
+
+    // --- Ammo Bag / Prapor (roubles) ---
+    "ammoBag": {
+        "enabled": true,
+        "price": 75000,
+        "loyaltyLevel": 1,
+        "gridH": 2,
+        "gridV": 2,
+        //"fleaPrice": 0,
+        //"extraFilters": ["IDs_go_here"],
+        //"name": "Recycled Ammo Bag",
+        //"shortName": "A-BAG",
+        //"description": "A recycled IFAK to hold ammunition.",
+    },
+
+    // --- Recycled First Aid Kit / Therapist (roubles) ---
+    "recycledFak": {
+        "enabled": true,
+        "price": 85000,
+        "loyaltyLevel": 1,
+        "gridH": 3,
+        "gridV": 3,
+        //"fleaPrice": 0,
+        //"extraFilters": ["IDs_go_here"],
+        //"name": "Recycled First Aid Kit",
+        //"shortName": "R-FAK",
+        //"description": "A used and dirty first aid kit. It can be reused in a similar way.",
+    },
+
+    // --- Small Portable Fridge / Jaeger (roubles) ---
+    "smallFridge": {
+        "enabled": true,
+        "price": 38000,
+        "loyaltyLevel": 1,
+        "gridH": 2,
+        "gridV": 3,
+        //"fleaPrice": 0,
+        //"extraFilters": ["IDs_go_here"],
+        //"name": "Small Portable Fridge",
+        //"shortName": "SP-F",
+        //"description": "A small portable fridge.",
+    },
+
+    // --- Small Toolbox / Skier (euros) ---
+    "smallToolbox": {
+        "enabled": true,
+        "price": 500,
+        "loyaltyLevel": 1,
+        "gridH": 4,
+        "gridV": 6,
+        //"fleaPrice": 0,
+        //"extraFilters": ["IDs_go_here"],
+        //"name": "Small Toolbox",
+        //"shortName": "S-TB",
+        //"description": "A small toolbox, probably stolen from a Scav.",
+    },
+
+    // --- Wooden Box / Jaeger (roubles) ---
+    // The wooden box accepts everything by default, so use extraExcludedFilters
+    // to block specific items or categories (e.g. other storage cases you don't want going inside).
+    // Example line for excluding the following cases (in order):
+    //   > Gear Box (from this mod), Lucky Scav Junk Box, Items Case, and THICC Items Case:
+    //   > "extraExcludedFilters": ["683d0995deed9b8d4f897ec2", "5b7c710788a4506dec015957", "59fb042886f7746c5005a7b2", "5c0a840b86f7742ffa4f2482"],
+    // The Gear Box is excluded in the config below as a default, add other item IDs to the array as per the example.
+    "woodenBox": {
+        "enabled": true,
+        "price": 1000000,
+        "loyaltyLevel": 2,
+        "gridH": 8,
+        "gridV": 6,
+        //"fleaPrice": 0,
+        "extraExcludedFilters": ["683d0995deed9b8d4f897ec2"],
+        //"name": "Ruined Wooden Box",
+        //"shortName": "RW-BOX",
+        //"description": "A worn-out wooden crate, still sturdy enough to store just about anything.",
+    },
+
+    // --- Mapbook / Therapist (roubles) - slot-based (one slot per map), no grid size or extraFilters ---
+    "mapbook": {
+        "enabled": true,
+        "price": 65000,
+        "loyaltyLevel": 2,
+        //"fleaPrice": 0,
+        //"name": "Secure Mapbook",
+        //"shortName": "Mapbook",
+        //"description": "A meticulously crafted book designed for storing and organizing maps.",
+    },
+
+    // --- Onyx / Peacekeeper (barter: Kappa + dollars) - each of the 3 grids can be resized independently ---
     "onyx": {
         "enabled": true,
         "dollarPrice": 85259,
         "loyaltyLevel": 4,
         "grid1H": 2, "grid1V": 3,
         "grid2H": 3, "grid2V": 4,
-        "grid3H": 1, "grid3V": 2
-    }
+        "grid3H": 1, "grid3V": 2,
+        //"fleaPrice": 0,
+        //"extraFilters": ["IDs_go_here"],
+        //"extraExcludedFilters": ["IDs_go_here"],
+        //"name": "Secure Container Onyx",
+        //"shortName": "OnyxSC",
+        //"description": "A secret Black Division invention for maximum storage - the Onyx secured container.",
+    },
 }
