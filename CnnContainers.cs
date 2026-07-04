@@ -86,11 +86,16 @@ public record ModConfig
     [JsonPropertyName("onyx")]         public OnyxConfig Onyx { get; init; } = new();
 }
 
-// Load late - after map-adding mods. DynamicMaps registers its extra maps (Ground Zero, Streets,
-// Reserve, Labs, Lighthouse, Labyrinth) at PostDBModLoader + 90000. The mapbook scans the DB for
-// every map to build its cells, so all map items must already exist when we run; loading earlier
-// means those later-registered maps get no cell. A high offset keeps us behind such mods.
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 100000)]
+// Load order matters for the mapbook: it scans the DB for every map to build one cell per map, so
+// all map items must exist when we run. This sets a narrow window:
+//   - Lower bound: after map-adding mods. DynamicMaps registers its extra maps (Ground Zero, Streets,
+//     Reserve, Labs, Lighthouse, Labyrinth) at PostDBModLoader + 90000, so we sit above that.
+//   - Upper bound: before TraderRegistration (PostDBModLoader + 100000, i.e. OnLoadOrder value 500000).
+//     The server snapshots trader assorts there; our Therapist mapbook assort must already be in the
+//     DB, or it gets wiped on the first trader resupply.
+// +99000 sits between the two. A map mod loading above +99000 would still be missed, but that window
+// is tiny and no known map mod runs that late.
+[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 99000)]
 public class CnnContainersLoader(
     ISptLogger<CnnContainersLoader> logger,
     ModHelper modHelper,
