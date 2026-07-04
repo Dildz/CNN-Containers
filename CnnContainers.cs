@@ -493,7 +493,13 @@ public class CnnContainersLoader(
                         }
                     }
                 },
-                Required = false,
+                // Required = true marks the slot's contents as non-raid-moddable, so SPT's
+                // insurance treats an inserted map as a fixed, built-in part of the mapbook
+                // (like a welded-on gun part) rather than a detachable attachment. Built-in
+                // parts ride back with the parent as one unit instead of being returned as
+                // separate insured items - which is what caused maps to duplicate on insurance.
+                // TEST: confirm the mapbook still works empty and maps still insert freely out of raid.
+                Required = true,
                 MergeSlotWithChildren = false,
                 Prototype = "55d4af244bdc2d962f8b4571"
             });
