@@ -327,8 +327,11 @@ public class CnnContainersLoader(
 
         return def with
         {
-            GridH             = cc.GridH,
-            GridV             = cc.GridV,
+            // Guard against a blanked/zeroed grid size in config: if the user commented
+            // out or set gridH/gridV to 0, fall back to the container's built-in size
+            // (the literal in the Containers table) instead of creating a broken 0-cell grid.
+            GridH             = cc.GridH > 0 ? cc.GridH : def.GridH,
+            GridV             = cc.GridV > 0 ? cc.GridV : def.GridV,
             FleaPrice         = cc.FleaPrice,
             FilterIds         = filterIds,
             ExcludedFilterIds = excludedFilterIds,
@@ -694,6 +697,13 @@ public class CnnContainersLoader(
             var enabled = isMapbook ? config.Mapbook.Enabled : cc!.Enabled;
             var cfgPrice = isMapbook ? config.Mapbook.Price : cc!.Price;
             var cfgLoyalty = isMapbook ? config.Mapbook.LoyaltyLevel : cc!.LoyaltyLevel;
+
+            // Guard against a blanked/zeroed price in config: never sell an item for free.
+            // Containers fall back to their handbook price, the mapbook to its default.
+            if (cfgPrice <= 0)
+                cfgPrice = isMapbook
+                    ? 65000
+                    : _resolvedContainers.FirstOrDefault(d => d.Id == itemId)?.HandbookPrice ?? 1;
 
             if (!enabled) continue;
 
