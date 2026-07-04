@@ -134,11 +134,10 @@ public class CnnContainersLoader(
     private const string SmallToolboxId = "683d09cd0c8ec927b398b7b7";
     private const string WoodenBoxId   = "683d09e1f5a4b7c8d9e20003";
 
-    // Mapbook item - slot-based container for maps (not grid-based, so handled separately)
+    // Mapbook item - a container that holds maps, one 1x1 cell per map (cells built dynamically at load).
     private const string MapbookId = "683d09d8a1b2c3d4e5f60001";
-    private const string MapbookCloneBase = "5f4f9eb969cdc30ff33f09db";
-    private const string MapbookParentId = "55818a104bdc2db9688b4569";
     private const string MapbookHandbookParentId = "5b47574386f77428ca22b345";
+    private const string MapCategoryId = "567849dd4bdc2d150f8b456e"; // "Map" base class - every map item inherits from this
 
     // Onyx secure container - multi-grid secure container cloned from Kappa
     private const string OnyxId = "674a33573fef1c2943025680";
@@ -157,23 +156,6 @@ public class CnnContainersLoader(
     private const string OnyxDefaultName        = "Secure Container Onyx";
     private const string OnyxDefaultShortName   = "OnyxSC";
     private const string OnyxDefaultDescription = "A secret Black Division invention for maximum storage - the Onyx secured container.";
-
-    // Map template IDs (one per slot in the mapbook)
-    private static readonly (string Name, string Id)[] MapIds =
-    [
-        ("Ground Zero", "6738033eb7305d3bdafe9518"),
-        ("Streets",     "673803448cb3819668d77b1b"),
-        ("Reserve",     "6738034a9713b5f42b4a8b78"),
-        ("Labs",        "6738034e9d22459ad7cd1b81"),
-        ("Lighthouse",  "6738035350b24a4ae4a57997"),
-        ("Factory",     "574eb85c245977648157eec3"),
-        ("Woods",       "5900b89686f7744e704a8747"),
-        ("Interchange", "5be4038986f774527d3fae60"),
-        ("Shoreline",   "5a8036fb86f77407252ddc02"),
-        ("Customs",     "5798a2832459774b53341029"),
-        ("Sanatorium",  "5a80a29286f7742b25692012"),
-        ("Labyrinth",   "68f1ad32317cc52f4c0b6fae"),
-    ];
 
     // Items allowed in both stash AND player inventory
     private static readonly string[] PortableItemIds =
@@ -478,22 +460,19 @@ public class CnnContainersLoader(
         var grids = new List<Grid>();
         var gridNumber = 1;
 
-        // Build one 1x1 grid per map, each grid filtered to a single specific map.
-        //  - Integer grid names ("1", "2", ...) make the grid contents count as regular
-        //    container items - exactly like the pouches in a vanilla chest rig - rather than
-        //    weapon-style attachments. This is what fixes the insurance duplication: SPT only
-        //    duplicates slotted attachments, never plain container contents.
-        //  - A 1x1 cell that only accepts one specific map means each map has exactly one home,
-        //    and a second copy of the same map has nowhere to go (prevents duplicates in the book).
-        foreach (var (mapName, mapId) in MapIds)
+        // Build one 1x1 grid per map by discovering every map in the server's item DB (all items
+        // whose parent is the "Map" base class). This always uses the correct, current template IDs
+        // and auto-includes new or modded maps - no hardcoded list to drift out of date.
+        //  - Integer grid names ("1", "2", ...) make the grid contents count as regular container
+        //    items - exactly like the pouches in a vanilla chest rig - rather than weapon-style
+        //    attachments. This is what fixes the insurance duplication: SPT only duplicates slotted
+        //    attachments, never plain container contents.
+        //  - A 1x1 cell filtered to a single specific map means each map has exactly one home, so a
+        //    second copy of the same map has nowhere to go (prevents duplicates inside the book).
+        foreach (var (mapTpl, mapItem) in items)
         {
-            // Only build a cell for maps that actually exist in this server's item DB - some map
-            // IDs may be absent depending on the SPT/EFT version, and a cell for a missing map is dead.
-            if (!items.ContainsKey(new MongoId(mapId)))
-            {
-                logger.Warning($"[CNN-Containers] Mapbook: map '{mapName}' ({mapId}) not in item DB - skipping its cell.");
+            if (!string.Equals(mapItem.Parent, MapCategoryId, StringComparison.OrdinalIgnoreCase))
                 continue;
-            }
 
             grids.Add(new Grid
             {
@@ -513,7 +492,7 @@ public class CnnContainersLoader(
                     {
                         new GridFilter
                         {
-                            Filter = new HashSet<MongoId> { new MongoId(mapId) },
+                            Filter = new HashSet<MongoId> { mapTpl },
                             ExcludedFilter = new HashSet<MongoId>()
                         }
                     }
@@ -522,6 +501,8 @@ public class CnnContainersLoader(
             gridNumber++;
         }
 
+        logger.Info($"[CNN-Containers] Mapbook: created {grids.Count} map cells.");
+
         var mapbookName        = config.Mapbook.Name        ?? MapbookDefaultName;
         var mapbookShortName   = config.Mapbook.ShortName   ?? MapbookDefaultShortName;
         var mapbookDescription = config.Mapbook.Description ?? MapbookDefaultDescription;
@@ -529,9 +510,12 @@ public class CnnContainersLoader(
 
         customItemService.CreateItemFromClone(new NewItemFromCloneDetails
         {
-            ItemTplToClone = MapbookCloneBase,
+            // Clone the same simple-container base the other containers use, and parent it to
+            // SimpleContainer so the client renders it as an openable grid container. The old
+            // weapon-mod parent made the client show "Install" instead of "Open" - it never opened.
+            ItemTplToClone = CloneBase,
             NewId = MapbookId,
-            ParentId = MapbookParentId,
+            ParentId = ContainerParentId,
             HandbookParentId = MapbookHandbookParentId,
             HandbookPriceRoubles = 76000,
             FleaPriceRoubles = mapbookFleaPrice,
