@@ -148,6 +148,16 @@ public class CnnContainersLoader(
     private const string OnyxFilterInclude = "54009119af1c881c07000029";    // Item base category
     private const string OnyxFilterExclude = "5447e1d04bdc2dff2f8b4567";    // Weapons
 
+    // Default display strings for the mapbook and Onyx. Kept as consts so the item's
+    // creation code and its locale entries always agree - a single source of truth
+    // for the fallback used when the config leaves name/shortName/description unset.
+    private const string MapbookDefaultName        = "Secure Mapbook";
+    private const string MapbookDefaultShortName   = "Mapbook";
+    private const string MapbookDefaultDescription = "A meticulously crafted book designed for storing and organizing maps.";
+    private const string OnyxDefaultName        = "Secure Container Onyx";
+    private const string OnyxDefaultShortName   = "OnyxSC";
+    private const string OnyxDefaultDescription = "A secret Black Division invention for maximum storage - the Onyx secured container.";
+
     // Map template IDs (one per slot in the mapbook)
     private static readonly (string Name, string Id)[] MapIds =
     [
@@ -271,17 +281,19 @@ public class CnnContainersLoader(
             ExcludedFilterIds: [WoodenBoxId]), // Never allow wooden boxes inside wooden boxes
     ];
 
-    // Trader assort entries: one item per trader, matching v3 prices/currencies
-    private static readonly (string TraderId, string ItemId, string CurrencyId, int Price, int LoyaltyLevel)[] TraderAssorts =
+    // Trader assort entries: which trader sells which item, and in what currency.
+    // Price and loyalty level are NOT listed here - they come from config at load time
+    // (see AddToTraderAssorts), so this table only needs the parts that never change.
+    private static readonly (string TraderId, string ItemId, string CurrencyId)[] TraderAssorts =
     [
-        ("54cb50c76803fa8b248b4571", AmmoBagId,      Roubles, 75000,   1), // Prapor
-        ("54cb57776803fa99248b456e", RecycledFakId,  Roubles, 85000,   1), // Therapist
-        ("54cb57776803fa99248b456e", MapbookId,      Roubles, 65000,   2), // Therapist
-        ("5935c25fb3acc3127c3d8cd9", ModCaseId,      Dollars, 1200,    2), // Peacekeeper
-        ("58330581ace78e27b8b10cee", SmallToolboxId, Euros,   500,     1), // Skier
-        ("5ac3b934156ae10c4430e83c", GearBoxId,      Roubles, 850000,  3), // Mechanic
-        ("5c0647fdd443bc2504c2d371", SmallFridgeId,  Roubles, 38000,   1), // Jaeger
-        ("5c0647fdd443bc2504c2d371", WoodenBoxId,    Roubles, 1000000, 2), // Jaeger
+        ("54cb50c76803fa8b248b4571", AmmoBagId,      Roubles), // Prapor
+        ("54cb57776803fa99248b456e", RecycledFakId,  Roubles), // Therapist
+        ("54cb57776803fa99248b456e", MapbookId,      Roubles), // Therapist
+        ("5935c25fb3acc3127c3d8cd9", ModCaseId,      Dollars), // Peacekeeper
+        ("58330581ace78e27b8b10cee", SmallToolboxId, Euros),   // Skier
+        ("5ac3b934156ae10c4430e83c", GearBoxId,      Roubles), // Mechanic
+        ("5c0647fdd443bc2504c2d371", SmallFridgeId,  Roubles), // Jaeger
+        ("5c0647fdd443bc2504c2d371", WoodenBoxId,    Roubles), // Jaeger
     ];
 
     // Map container IDs to their config entry
@@ -484,9 +496,9 @@ public class CnnContainersLoader(
             });
         }
 
-        var mapbookName        = config.Mapbook.Name        ?? "Secure Mapbook";
-        var mapbookShortName   = config.Mapbook.ShortName   ?? "Mapbook";
-        var mapbookDescription = config.Mapbook.Description ?? "A meticulously crafted book designed for storing and organizing maps.";
+        var mapbookName        = config.Mapbook.Name        ?? MapbookDefaultName;
+        var mapbookShortName   = config.Mapbook.ShortName   ?? MapbookDefaultShortName;
+        var mapbookDescription = config.Mapbook.Description ?? MapbookDefaultDescription;
         var mapbookFleaPrice   = config.Mapbook.FleaPrice > 0 ? config.Mapbook.FleaPrice : 76000;
 
         customItemService.CreateItemFromClone(new NewItemFromCloneDetails
@@ -591,9 +603,9 @@ public class CnnContainersLoader(
             }
         };
 
-        var onyxName        = config.Onyx.Name        ?? "Secure Container Onyx";
-        var onyxShortName   = config.Onyx.ShortName   ?? "OnyxSC";
-        var onyxDescription = config.Onyx.Description ?? "A secret Black Division invention for maximum storage - the Onyx secured container.";
+        var onyxName        = config.Onyx.Name        ?? OnyxDefaultName;
+        var onyxShortName   = config.Onyx.ShortName   ?? OnyxDefaultShortName;
+        var onyxDescription = config.Onyx.Description ?? OnyxDefaultDescription;
         var onyxFleaPrice   = config.Onyx.FleaPrice > 0 ? config.Onyx.FleaPrice : 12999999;
 
         customItemService.CreateItemFromClone(new NewItemFromCloneDetails
@@ -657,15 +669,15 @@ public class CnnContainersLoader(
                 }
                 if (config.Mapbook.Enabled)
                 {
-                    data[$"{MapbookId} Name"] = config.Mapbook.Name        ?? "Secure Mapbook";
-                    data[$"{MapbookId} ShortName"] = config.Mapbook.ShortName   ?? "Mapbook";
-                    data[$"{MapbookId} Description"] = config.Mapbook.Description ?? "A meticulously crafted book designed for storing and organizing maps.";
+                    data[$"{MapbookId} Name"] = config.Mapbook.Name        ?? MapbookDefaultName;
+                    data[$"{MapbookId} ShortName"] = config.Mapbook.ShortName   ?? MapbookDefaultShortName;
+                    data[$"{MapbookId} Description"] = config.Mapbook.Description ?? MapbookDefaultDescription;
                 }
                 if (config.Onyx.Enabled)
                 {
-                    data[$"{OnyxId} Name"] = config.Onyx.Name        ?? "Secure Container Onyx";
-                    data[$"{OnyxId} ShortName"] = config.Onyx.ShortName   ?? "OnyxSC";
-                    data[$"{OnyxId} Description"] = config.Onyx.Description ?? "A secret Black Division invention for maximum storage - the Onyx secured container.";
+                    data[$"{OnyxId} Name"] = config.Onyx.Name        ?? OnyxDefaultName;
+                    data[$"{OnyxId} ShortName"] = config.Onyx.ShortName   ?? OnyxDefaultShortName;
+                    data[$"{OnyxId} Description"] = config.Onyx.Description ?? OnyxDefaultDescription;
                 }
                 return data;
             });
@@ -674,7 +686,7 @@ public class CnnContainersLoader(
 
     private void AddToTraderAssorts()
     {
-        foreach (var (traderId, itemId, currencyId, _, _) in TraderAssorts)
+        foreach (var (traderId, itemId, currencyId) in TraderAssorts)
         {
             // Look up config for this item (mapbook uses its own config type)
             var isMapbook = itemId == MapbookId;
