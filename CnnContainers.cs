@@ -86,7 +86,11 @@ public record ModConfig
     [JsonPropertyName("onyx")]         public OnyxConfig Onyx { get; init; } = new();
 }
 
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
+// Load late - after map-adding mods. DynamicMaps registers its extra maps (Ground Zero, Streets,
+// Reserve, Labs, Lighthouse, Labyrinth) at PostDBModLoader + 90000. The mapbook scans the DB for
+// every map to build its cells, so all map items must already exist when we run; loading earlier
+// means those later-registered maps get no cell. A high offset keeps us behind such mods.
+[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 100000)]
 public class CnnContainersLoader(
     ISptLogger<CnnContainersLoader> logger,
     ModHelper modHelper,
