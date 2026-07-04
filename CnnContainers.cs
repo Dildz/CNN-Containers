@@ -699,10 +699,10 @@ public class CnnContainersLoader(
             var cfgLoyalty = isMapbook ? config.Mapbook.LoyaltyLevel : cc!.LoyaltyLevel;
 
             // Guard against a blanked/zeroed price in config: never sell an item for free.
-            // Containers fall back to their handbook price, the mapbook to its default.
+            // Everything falls back to its handbook price (the mapbook's is 76000).
             if (cfgPrice <= 0)
                 cfgPrice = isMapbook
-                    ? 65000
+                    ? 76000
                     : _resolvedContainers.FirstOrDefault(d => d.Id == itemId)?.HandbookPrice ?? 1;
 
             if (!enabled) continue;
