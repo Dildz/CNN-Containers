@@ -474,35 +474,52 @@ public class CnnContainersLoader(
 
     private void CreateMapbook()
     {
-        var slots = new List<Slot>();
-        for (var i = 0; i < MapIds.Length; i++)
+        var items = databaseService.GetItems();
+        var grids = new List<Grid>();
+        var gridNumber = 1;
+
+        // Build one 1x1 grid per map, each grid filtered to a single specific map.
+        //  - Integer grid names ("1", "2", ...) make the grid contents count as regular
+        //    container items - exactly like the pouches in a vanilla chest rig - rather than
+        //    weapon-style attachments. This is what fixes the insurance duplication: SPT only
+        //    duplicates slotted attachments, never plain container contents.
+        //  - A 1x1 cell that only accepts one specific map means each map has exactly one home,
+        //    and a second copy of the same map has nowhere to go (prevents duplicates in the book).
+        foreach (var (mapName, mapId) in MapIds)
         {
-            var (_, mapId) = MapIds[i];
-            slots.Add(new Slot
+            // Only build a cell for maps that actually exist in this server's item DB - some map
+            // IDs may be absent depending on the SPT/EFT version, and a cell for a missing map is dead.
+            if (!items.ContainsKey(new MongoId(mapId)))
             {
-                Name = $"mod_mount_{(i + 1).ToString().PadLeft(2, '0')}",
+                logger.Warning($"[CNN-Containers] Mapbook: map '{mapName}' ({mapId}) not in item DB - skipping its cell.");
+                continue;
+            }
+
+            grids.Add(new Grid
+            {
                 Id = new MongoId(),
-                Parent = "55818b224bdc2dde698b456f",
-                Properties = new SlotProperties
+                Name = gridNumber.ToString(),
+                Parent = new MongoId(MapbookId),
+                Prototype = new MongoId(GridProto),
+                Properties = new GridProperties
                 {
-                    Filters = new List<SlotFilter>
+                    CellsH = 1,
+                    CellsV = 1,
+                    IsSortingTable = false,
+                    MaxCount = 0,
+                    MaxWeight = 0,
+                    MinCount = 0,
+                    Filters = new List<GridFilter>
                     {
-                        new SlotFilter
+                        new GridFilter
                         {
-                            Filter = new HashSet<MongoId> { new MongoId(mapId) }
+                            Filter = new HashSet<MongoId> { new MongoId(mapId) },
+                            ExcludedFilter = new HashSet<MongoId>()
                         }
                     }
-                },
-                // Required = true marks the slot's contents as non-raid-moddable, so SPT's
-                // insurance treats an inserted map as a fixed, built-in part of the mapbook
-                // (like a welded-on gun part) rather than a detachable attachment. Built-in
-                // parts ride back with the parent as one unit instead of being returned as
-                // separate insured items - which is what caused maps to duplicate on insurance.
-                // TEST: confirm the mapbook still works empty and maps still insert freely out of raid.
-                Required = true,
-                MergeSlotWithChildren = false,
-                Prototype = "55d4af244bdc2d962f8b4571"
+                }
             });
+            gridNumber++;
         }
 
         var mapbookName        = config.Mapbook.Name        ?? MapbookDefaultName;
@@ -546,8 +563,8 @@ public class CnnContainersLoader(
                 ItemSound = "item_book",
                 MergesWithChildren = false,
                 Prefab = new Prefab { Path = "assets/content/items/barter/item_mapbook/mapbook.bundle" },
-                Grids = new List<Grid>(),
-                Slots = slots
+                Grids = grids,
+                Slots = new List<Slot>()
             }
         });
     }
