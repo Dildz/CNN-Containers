@@ -16,8 +16,9 @@ permissions:
 
 jobs:
   release:
-    # Windows runner: the csproj zip target uses Windows-style paths, and this matches the dev environment.
-    runs-on: windows-latest
+    # Linux runner: the build + zip target are path-agnostic, so this matches how many SPT servers
+    # run (Linux/Docker) and is faster/cheaper than a Windows runner.
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4

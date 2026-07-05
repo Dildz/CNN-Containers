@@ -37,8 +37,9 @@
   <!-- After a Release build, create a zip ready to extract into the SPT install folder -->
   <Target Name="CreateReleaseZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <PropertyGroup>
-      <ZipStaging>$(ProjectDir)_zip_staging\SPT\user\mods\$(ProjectName)</ZipStaging>
-      <ZipOutput>$(ProjectDir)bin\Release\$(ProjectName)-v$(Version).zip</ZipOutput>
+      <!-- Forward slashes so this target builds on Windows and Linux/Docker alike (MSBuild accepts / on both) -->
+      <ZipStaging>$(ProjectDir)_zip_staging/SPT/user/mods/$(ProjectName)</ZipStaging>
+      <ZipOutput>$(ProjectDir)bin/Release/$(ProjectName)-v$(Version).zip</ZipOutput>
     </PropertyGroup>
 
     <RemoveDir Directories="$(ProjectDir)_zip_staging" />
@@ -49,7 +50,7 @@
     </ItemGroup>
 
     <Copy SourceFiles="@(ZipFiles)"
-          DestinationFiles="@(ZipFiles->'$(ZipStaging)\%(RecursiveDir)%(Filename)%(Extension)')" />
+          DestinationFiles="@(ZipFiles->'$(ZipStaging)/%(RecursiveDir)%(Filename)%(Extension)')" />
 
     <ZipDirectory SourceDirectory="$(ProjectDir)_zip_staging"
                   DestinationFile="$(ZipOutput)"
