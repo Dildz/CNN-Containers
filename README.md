@@ -111,6 +111,7 @@ The Onyx is offered three ways by Peacekeeper: barter with the Kappa, barter wit
 ## Known Issues
 
 - The Mod Case and Ruined Wooden Box models display with pink/purple textures (missing shaders). The bundles were built for an older Unity version and need to be recompiled for SPT v4.0's Unity version. Functionally they work fine.
+- v4.4.0 reports its version as `4.3.0` in the server console (a leftover hardcoded version string). This is cosmetic only — the release is the correct v4.4.0 build. Already fixed in the code and will report correctly from the next release.
 
 ## Support
 

@@ -2,6 +2,11 @@
 
 Only user-facing changes are listed. Versions match the Forge releases (4.0.0, 4.2.2, 4.3.0, ...).
 
+## [Unreleased]
+
+### Fixed
+- Mod now reports its correct version in the server console. The version is read from the assembly (the csproj `<Version>`) instead of a separate hardcoded string, so it can't drift out of sync with the release again. (v4.4.0 displayed as `4.3.0` due to a stale hardcoded string — cosmetic only.)
+
 ## [4.4.0] - 2026-07-05
 
 > ### ⚠️ Breaking - empty your Secure Mapbook before updating

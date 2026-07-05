@@ -19,7 +19,10 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = "CNN-Containers";
     public override string Author { get; init; } = "Cannuccia";
     public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("4.3.0");
+    // Read from the assembly version (set by <Version> in the csproj) so version lives in ONE place
+    // and can't drift out of sync with the release zip. ToString(3) turns 4.4.0.0 into "4.4.0".
+    public override SemanticVersioning.Version Version { get; init; } =
+        new(Assembly.GetExecutingAssembly().GetName().Version!.ToString(3));
     public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
