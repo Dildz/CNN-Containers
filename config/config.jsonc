@@ -155,6 +155,7 @@
         "grid2H": 3, "grid2V": 4,
         "grid3H": 1, "grid3V": 2,
         //"fleaPrice": 0,
+        //"dollarOnlyPrice": 501437,   // price of the dollars-only Onyx barter (no Kappa needed); omit to use the default
         //"extraFilters": ["IDs_go_here"],
         //"extraExcludedFilters": ["IDs_go_here"],
         //"name": "Secure Container Onyx",

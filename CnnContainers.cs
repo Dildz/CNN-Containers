@@ -58,6 +58,9 @@ public record OnyxConfig
 {
     [JsonPropertyName("enabled")]      public bool Enabled { get; init; } = true;
     [JsonPropertyName("dollarPrice")]  public int DollarPrice { get; init; } = 85000;
+    // Optional: price of the dollars-only barter. Left 0 (default) means "not set" -> falls back to
+    // OnyxDollarOnlyPrice in code, so admins never have to add this line unless they want to override it.
+    [JsonPropertyName("dollarOnlyPrice")] public int DollarOnlyPrice { get; init; }
     [JsonPropertyName("fleaPrice")]    public int FleaPrice { get; init; }
     [JsonPropertyName("loyaltyLevel")] public int LoyaltyLevel { get; init; } = 4;
     [JsonPropertyName("grid1H")]       public int Grid1H { get; init; } = 2;
@@ -154,6 +157,10 @@ public class CnnContainersLoader(
     private const string DesecratedKappaId = "676008db84e242067d0dc4c9"; // Desecrated Kappa
     private const string OnyxHandbookParentId = "5b5f6fd286f774093f2ecf0d"; // Secure Containers handbook category (matches Kappa's handbook.ParentId)
     private const string OnyxFilterInclude = "54009119af1c881c07000029";    // Item base category
+    // Default price of the dollars-only Onyx barter: priced well above the Kappa top-up ($85,259) since
+    // no Kappa is sacrificed. This is the fallback used when config's optional "dollarOnlyPrice" is unset,
+    // so no config key is required - existing configs stay untouched on update. Admins can override in config.
+    private const int OnyxDollarOnlyPrice = 501437;
     private const string OnyxFilterExclude = "5447e1d04bdc2dff2f8b4567";    // Weapons
 
     // Default display strings for the mapbook and Onyx. Kept as consts so the item's
@@ -282,7 +289,7 @@ public class CnnContainersLoader(
         ("54cb57776803fa99248b456e", MapbookId,      Roubles), // Therapist
         ("5935c25fb3acc3127c3d8cd9", ModCaseId,      Dollars), // Peacekeeper
         ("58330581ace78e27b8b10cee", SmallToolboxId, Euros),   // Skier
-        ("5ac3b934156ae10c4430e83c", GearBoxId,      Roubles), // Mechanic
+        ("5ac3b934156ae10c4430e83c", GearBoxId,      Roubles), // Ragman
         ("5c0647fdd443bc2504c2d371", SmallFridgeId,  Roubles), // Jaeger
         ("5c0647fdd443bc2504c2d371", WoodenBoxId,    Roubles), // Jaeger
     ];
@@ -351,7 +358,6 @@ public class CnnContainersLoader(
         PatchSpecialSlots();
         ExcludeFromEquipment();
         PatchVanillaContainers();
-        if (config.ModCase.Enabled && config.Mapbook.Enabled) ExcludeMapbookFromModCase();
 
         logger.Success("[CNN-Containers] Loaded successfully.");
         return Task.CompletedTask;
@@ -808,6 +814,36 @@ public class CnnContainersLoader(
                 };
 
                 pkAssort.LoyalLevelItems[onyxAssortId2] = config.Onyx.LoyaltyLevel;
+
+                // Barter 3: Dollars only (no Kappa sacrificed - costs more to compensate).
+                // Lets players who want to keep their Kappa still buy the Onyx.
+                // Uses the optional config price if an admin set one (>0), else the code default.
+                var onyxDollarOnlyPrice = config.Onyx.DollarOnlyPrice > 0
+                    ? config.Onyx.DollarOnlyPrice
+                    : OnyxDollarOnlyPrice;
+                var onyxAssortId3 = new MongoId();
+                pkAssort.Items.Add(new Item
+                {
+                    Id = onyxAssortId3,
+                    Template = new MongoId(OnyxId),
+                    ParentId = "hideout",
+                    SlotId = "hideout",
+                    Upd = new Upd
+                    {
+                        UnlimitedCount = true,
+                        StackObjectsCount = 999
+                    }
+                });
+
+                pkAssort.BarterScheme[onyxAssortId3] = new List<List<BarterScheme>>
+                {
+                    new List<BarterScheme>
+                    {
+                        new BarterScheme { Template = new MongoId(Dollars), Count = onyxDollarOnlyPrice }
+                    }
+                };
+
+                pkAssort.LoyalLevelItems[onyxAssortId3] = config.Onyx.LoyaltyLevel;
             }
         }
     }
@@ -953,26 +989,6 @@ public class CnnContainersLoader(
                 foreach (var id in patchIds)
                     filter.Filter.Add(id);
             }
-        }
-    }
-
-    // The mapbook's parent falls under weapon mods, so exclude it from the mod case.
-    private void ExcludeMapbookFromModCase()
-    {
-        var items = databaseService.GetItems();
-        if (!items.TryGetValue(new MongoId(ModCaseId), out var modCase)) return;
-
-        var grids = modCase.Properties?.Grids;
-        if (grids == null) return;
-
-        var mapbookMongoId = new MongoId(MapbookId);
-        foreach (var grid in grids)
-        {
-            var filter = grid.Properties?.Filters?.FirstOrDefault();
-            if (filter == null) continue;
-
-            filter.ExcludedFilter ??= new HashSet<MongoId>();
-            filter.ExcludedFilter.Add(mapbookMongoId);
         }
     }
 }
