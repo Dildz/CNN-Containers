@@ -1,0 +1,58 @@
+name: Release
+
+# Cut a release by pushing a version tag, e.g.:
+#   git tag v4.4.0 && git push origin v4.4.0
+# CI then builds the Release zip and attaches it to a matching GitHub Release.
+# Manual runs (workflow_dispatch) just build + upload the zip as an artifact for testing.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+jobs:
+  release:
+    # Windows runner: the csproj zip target uses Windows-style paths, and this matches the dev environment.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # Fail early if the pushed tag doesn't match <Version> in the csproj, so we never
+      # publish a zip whose filename disagrees with the tag.
+      - name: Verify tag matches csproj version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          CSPROJ_VERSION=$(grep -oE '<Version>[^<]+</Version>' CNN-Containers.csproj | head -1 | sed -E 's|</?Version>||g')
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "csproj=<$CSPROJ_VERSION>  tag=<$TAG_VERSION>"
+          if [ "$CSPROJ_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match csproj <Version>$CSPROJ_VERSION</Version>. Bump the csproj version to match the tag."
+            exit 1
+          fi
+
+      # Release build runs the CreateReleaseZip target -> bin/Release/CNN-Containers-v<version>.zip
+      - name: Build Release
+        run: dotnet build -c Release
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CNN-Containers-zip
+          path: bin/Release/*.zip
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bin/Release/*.zip
+          generate_release_notes: true
