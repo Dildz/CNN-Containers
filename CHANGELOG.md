@@ -4,8 +4,21 @@ Only user-facing changes are listed. Versions match the Forge releases (4.0.0, 4
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-08-03
+
+> ### ⚠️ SPT 4.1.X only — and the install folder changed
+> SPT 4.1 refuses to load mods built against 4.0, so this build will not run on SPT 4.0 — stay on v4.4.0 if you haven't upgraded. SPT 4.1 also renamed its server folder from `SPT/` to `SPT_Runtime/`, so extract the zip into your **game root** and delete the old copy out of `SPT\user\mods\CNN-Containers`. Your existing config carries over unchanged.
+
+### Changed
+- Rebuilt for **SPT 4.1.X** on .NET 10, and migrated to 4.1's mod API: the new metadata interface, the async load lifecycle with shutdown cancellation support, and direct injection of the database tables now that the old database service is gone.
+- Containers are now registered earlier in server startup. SPT 4.1 loads the database before anything else runs and asks mods that add their own items and trader offers to register at that point, so the containers and their trader assorts exist before any profile is loaded.
+- Cloned items now carry their own internal name (the Gear Box identifies itself as `item_container_gearbox` rather than inheriting the name of the pouch it was cloned from). Cosmetic — it shows up in logs and debugging tools, not in game.
+
 ### Fixed
 - Mod now reports its correct version in the server console. The version is read from the assembly (the csproj `<Version>`) instead of a separate hardcoded string, so it can't drift out of sync with the release again. (v4.4.0 displayed as `4.3.0` due to a stale hardcoded string — cosmetic only.)
+
+### Internal
+- CI now builds on every push and pull request instead of only when a release is tagged, so a broken commit is caught before release time rather than at it.
 
 ## [4.4.0] - 2026-07-05
 

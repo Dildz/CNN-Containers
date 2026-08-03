@@ -1,16 +1,28 @@
 # CNN-Containers
 
-Port of [CNN-Containers Re-Upload](https://forge.sp-tarkov.com/mod/2167/cnn-containers-re-upload) mod, for SPT v4.0.X
+Port of [CNN-Containers Re-Upload](https://forge.sp-tarkov.com/mod/2167/cnn-containers-re-upload) mod, for SPT v4.1.X
 
 Full rework of the CNN-CONTAINERS mod (v4) with additional cases added. Cases can now be configured via a config file.
 
 ## Installation
 
-Download and extract the mod package zip into your SPT directory.
+Download and extract the mod package zip into your **game root** - the folder that contains `SPT_Runtime/`. The zip already has the full path inside it, so the mod lands in `SPT_Runtime\user\mods\CNN-Containers`.
 
 ## Updating
 
-Download, extract the mod package zip into your SPT directory and overwrite the contents when prompted.
+Download, extract the mod package zip into your **game root** and overwrite the contents when prompted.
+
+> **v5.0.0 Notes:**
+>
+> ### ⚠️ This version is for SPT 4.1.X only
+>
+> SPT 4.1 checks which server version a mod was built against and refuses to load mismatched mods, so this build will not run on SPT 4.0. If you're still on 4.0, stay on [v4.4.0](https://github.com/Dildz/CNN-Containers/releases/tag/v4.4.0).
+>
+> ### 📁 The install folder changed
+>
+> SPT 4.1 renamed its server folder from `SPT/` to `SPT_Runtime/`. Extract into your game root as above, and **delete the old copy out of `SPT\user\mods\CNN-Containers`** so you don't leave a stale build behind.
+>
+> Your existing `config/config.jsonc` carries over unchanged - no edits needed.
 
 > **v4.3.0 Notes:**
 >
@@ -110,8 +122,7 @@ The Onyx is offered three ways by Peacekeeper: barter with the Kappa, barter wit
 
 ## Known Issues
 
-- The Mod Case and Ruined Wooden Box models display with pink/purple textures (missing shaders). The bundles were built for an older Unity version and need to be recompiled for SPT v4.0's Unity version. Functionally they work fine.
-- v4.4.0 reports its version as `4.3.0` in the server console (a leftover hardcoded version string). This is cosmetic only — the release is the correct v4.4.0 build. Already fixed in the code and will report correctly from the next release.
+- The Mod Case and Ruined Wooden Box models display with pink/purple textures (missing shaders). The bundles were built for an older Unity version and need recompiling for the Unity version SPT currently targets. Functionally they work fine.
 
 ## Support
 
