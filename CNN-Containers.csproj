@@ -1,21 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>CnnContainers</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>4.4.0</Version>
+    <Version>5.0.0</Version>
     <!-- The two lines below will set the output path for the binaries -->
     <OutputPath>bin\$(Configuration)\$(ProjectName)\$(AssemblyName)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SPTarkov.Common" Version="4.0.13" />
-    <PackageReference Include="SPTarkov.DI" Version="4.0.13" />
-    <PackageReference Include="SPTarkov.Server.Core" Version="4.0.13" />
+    <PackageReference Include="SPTarkov.Common" Version="4.1.1" />
+    <PackageReference Include="SPTarkov.DI" Version="4.1.1" />
+    <PackageReference Include="SPTarkov.Server.Core" Version="4.1.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,7 +38,9 @@
   <Target Name="CreateReleaseZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <PropertyGroup>
       <!-- Forward slashes so this target builds on Windows and Linux/Docker alike (MSBuild accepts / on both) -->
-      <ZipStaging>$(ProjectDir)_zip_staging/SPT/user/mods/$(ProjectName)</ZipStaging>
+      <!-- SPT 4.1 renamed the server folder from SPT/ to SPT_Runtime/ (the 4.1.1 release archive's
+           top-level folder, and SPTInstaller's SetupClientTask). user/mods/ inside it is unchanged. -->
+      <ZipStaging>$(ProjectDir)_zip_staging/SPT_Runtime/user/mods/$(ProjectName)</ZipStaging>
       <ZipOutput>$(ProjectDir)bin/Release/$(ProjectName)-v$(Version).zip</ZipOutput>
     </PropertyGroup>
 

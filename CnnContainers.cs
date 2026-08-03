@@ -1,34 +1,34 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Server;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Mod;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Services;
-using SPTarkov.Server.Core.Services.Mod;
+using SPTarkov.Server.Core.Models.Spt.Tables;
+using SPTarkov.Server.Core.Services.Modding.Custom;
 
 namespace CnnContainers;
 
-public record ModMetadata : AbstractModMetadata
+public record ModMetadata : IModMetadata
 {
-    public override string ModGuid { get; init; } = "com.cannuccia.cnn-containers";
-    public override string Name { get; init; } = "CNN-Containers";
-    public override string Author { get; init; } = "Cannuccia";
-    public override List<string>? Contributors { get; init; }
+    public string ModGuid { get; init; } = "com.cannuccia.cnn-containers";
+    public string Name { get; init; } = "CNN-Containers";
+    public string Author { get; init; } = "Cannuccia";
+    public List<string>? Contributors { get; init; }
     // Read from the assembly version (set by <Version> in the csproj) so version lives in ONE place
-    // and can't drift out of sync with the release zip. ToString(3) turns 4.4.0.0 into "4.4.0".
-    public override SemanticVersioning.Version Version { get; init; } =
+    // and can't drift out of sync with the release zip. ToString(3) turns 5.0.0.0 into "5.0.0".
+    public SemanticVersioning.Version Version { get; init; } =
         new(Assembly.GetExecutingAssembly().GetName().Version!.ToString(3));
-    public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
-    public override List<string>? Incompatibilities { get; init; }
-    public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
-    public override string? Url { get; init; }
-    public override bool? IsBundleMod { get; init; } = true;
-    public override string License { get; init; } = "MIT";
+    public SemanticVersioning.Range SptVersion { get; init; } = new("~4.1.0");
+    public bool HasPrepatcher { get; init; } = false;
+    public List<string>? Incompatibilities { get; init; }
+    public Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
+    public string? Url { get; init; }
+    public string License { get; init; } = "MIT";
 }
 
 public record ContainerConfig
@@ -92,20 +92,24 @@ public record ModConfig
     [JsonPropertyName("onyx")]         public OnyxConfig Onyx { get; init; } = new();
 }
 
-// Load order matters for the mapbook: it scans the DB for every map to build one cell per map, so
-// all map items must exist when we run. This sets a narrow window:
-//   - Lower bound: after map-adding mods. DynamicMaps registers its extra maps (Ground Zero, Streets,
-//     Reserve, Labs, Lighthouse, Labyrinth) at PostDBModLoader + 90000, so we sit above that.
-//   - Upper bound: before TraderRegistration (PostDBModLoader + 100000, i.e. OnLoadOrder value 500000).
-//     The server snapshots trader assorts there; our Therapist mapbook assort must already be in the
-//     DB, or it gets wiped on the first trader resupply.
-// +99000 sits between the two. A map mod loading above +99000 would still be missed, but that window
-// is tiny and no known map mod runs that late.
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 99000)]
+// Load order matters for the mapbook: it scans the DB for every map to build one cell per map, so all
+// map items must exist when we run.
+//   - 4.1 loads the database before anything else runs, so the old "wait until after the DB" stage
+//     (PostDBModLoader) is gone. SPT's guidance is that a mod adding its own data to the database runs
+//     at Preload, so items and traders exist before any profile is loaded.
+//   - Upper bound: the trader assort snapshot happens at TraderCallbacks (700000), where
+//     TraderCallbacks.OnLoadAsync calls traderController.Load(). Our Therapist mapbook assort must be
+//     in the DB before then or it gets wiped on the first trader resupply. Preload is well clear of it.
+//   - Lower bound: still after map-adding mods. DynamicMaps sat at PostDBModLoader + 90000 on 4.0;
+//     where it lands on 4.1 is unknown until it ports, so +99000 is a best guess that keeps us late
+//     within the Preload stage (stages are 100000 apart, so this stays below GameCallbacks).
+[Injectable(TypePriority = OnLoadOrder.Preload + 99000)]
 public class CnnContainersLoader(
     ISptLogger<CnnContainersLoader> logger,
     ModHelper modHelper,
-    DatabaseService databaseService,
+    TemplateTable templateTable,
+    LocaleTable localeTable,
+    TradersTable tradersTable,
     CustomItemService customItemService) : IOnLoad
 {
     private ModConfig config = new();
@@ -342,9 +346,9 @@ public class CnnContainersLoader(
         };
     }
 
-    public Task OnLoad()
+    public async Task OnLoadAsync(CancellationToken cancellationToken)
     {
-        LoadConfig();
+        await LoadConfigAsync(cancellationToken);
         _resolvedContainers = [..Containers.Select(ResolveContainer)];
 
         foreach (var def in _resolvedContainers)
@@ -363,10 +367,9 @@ public class CnnContainersLoader(
         PatchVanillaContainers();
 
         logger.Success("[CNN-Containers] Loaded successfully.");
-        return Task.CompletedTask;
     }
 
-    private void LoadConfig()
+    private async Task LoadConfigAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -379,7 +382,7 @@ public class CnnContainersLoader(
                 return;
             }
 
-            var json = File.ReadAllText(configPath);
+            var json = await File.ReadAllTextAsync(configPath, cancellationToken);
             var options = new JsonSerializerOptions
             {
                 AllowTrailingCommas = true,
@@ -474,7 +477,7 @@ public class CnnContainersLoader(
 
     private void CreateMapbook()
     {
-        var items = databaseService.GetItems();
+        var items = templateTable.Items;
         var grids = new List<Grid>();
         var gridNumber = 1;
 
@@ -581,7 +584,7 @@ public class CnnContainersLoader(
         HashSet<MongoId> includeIds;
         HashSet<MongoId> excludeIds;
 
-        var items = databaseService.GetItems();
+        var items = templateTable.Items;
         var kappaTpl = items.TryGetValue(new MongoId(OnyxCloneBase), out var tpl) ? tpl : null;
         var kappaFilter = kappaTpl?.Properties?.Grids?.FirstOrDefault()?.Properties?.Filters?.FirstOrDefault();
 
@@ -683,7 +686,7 @@ public class CnnContainersLoader(
     // SPT lazy-loads locales so we must use AddTransformer rather than direct assignment.
     private void AddLocales()
     {
-        foreach (var (_, localeKvP) in databaseService.GetLocales().Global)
+        foreach (var (_, localeKvP) in localeTable.Global)
         {
             localeKvP.AddTransformer(data =>
             {
@@ -733,7 +736,7 @@ public class CnnContainersLoader(
             if (!enabled) continue;
 
             var assortItemId = new MongoId();
-            var assort = databaseService.GetTrader(new MongoId(traderId))?.Assort;
+            var assort = tradersTable.GetTrader(new MongoId(traderId))?.Assort;
             if (assort is null) continue;
 
             assort.Items.Add(new Item
@@ -763,7 +766,7 @@ public class CnnContainersLoader(
         // Onyx barter trades: Kappa + dollars OR Desecrated Kappa + dollars from Peacekeeper
         if (config.Onyx.Enabled)
         {
-            var pkAssort = databaseService.GetTrader(new MongoId("5935c25fb3acc3127c3d8cd9"))?.Assort;
+            var pkAssort = tradersTable.GetTrader(new MongoId("5935c25fb3acc3127c3d8cd9"))?.Assort;
             if (pkAssort is not null)
             {
                 // Barter 1: Regular Kappa + Dollars
@@ -867,7 +870,7 @@ public class CnnContainersLoader(
             .Where(IsItemEnabled)
             .Select(id => new MongoId(id)).ToList();
 
-        foreach (var (_, tpl) in databaseService.GetItems())
+        foreach (var (_, tpl) in templateTable.Items)
         {
             if (!string.Equals(tpl.Parent, SecureContainerParentId, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -901,7 +904,7 @@ public class CnnContainersLoader(
 
         var mapbookMongoId = new MongoId(MapbookId);
 
-        foreach (var (_, tpl) in databaseService.GetItems())
+        foreach (var (_, tpl) in templateTable.Items)
         {
             if (tpl.Properties?.Slots == null) continue;
 
@@ -934,7 +937,7 @@ public class CnnContainersLoader(
             .Select(id => new MongoId(id)).ToHashSet();
         string[] equipmentParents = [BackpackParentId, VestParentId, PocketsParentId];
 
-        foreach (var (_, tpl) in databaseService.GetItems())
+        foreach (var (_, tpl) in templateTable.Items)
         {
             if (!equipmentParents.Any(p => string.Equals(tpl.Parent, p, StringComparison.OrdinalIgnoreCase)))
                 continue;
@@ -974,7 +977,7 @@ public class CnnContainersLoader(
         if (!patchIds.Any()) return;
 
         string[] vanillaCaseIds = [ItemsCaseId, ThiccItemsCaseId];
-        var items = databaseService.GetItems();
+        var items = templateTable.Items;
 
         foreach (var caseId in vanillaCaseIds)
         {

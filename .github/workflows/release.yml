@@ -1,14 +1,18 @@
-name: Release
+name: Build & Release
 
+# Every push and PR builds the mod, so a broken commit is caught before release time.
 # Cut a release by pushing a version tag, e.g.:
-#   git tag v4.4.0 && git push origin v4.4.0
+#   git tag v5.0.0 && git push origin v5.0.0
 # CI then builds the Release zip and attaches it to a matching GitHub Release.
 # Manual runs (workflow_dispatch) just build + upload the zip as an artifact for testing.
 
 on:
   push:
+    branches:
+      - '**'
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -23,9 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      # SPT 4.1 targets .NET 10 (server-csharp Build.props), so 9.0.x is no longer enough.
+      # Action + version string match sp-tarkov/server-csharp's own .github/workflows/test.yaml.
+      - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: 10.0
 
       # Fail early if the pushed tag doesn't match <Version> in the csproj, so we never
       # publish a zip whose filename disagrees with the tag.
