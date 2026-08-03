@@ -407,6 +407,10 @@ public class CnnContainersLoader(
         {
             ItemTplToClone = CloneBase,
             NewId = def.Id,
+            // 4.1 requires an internal item name (TemplateItem._name); on 4.0 the clone silently kept
+            // the SICC pouch's. The bundle filename already follows EFT's convention for these
+            // (item_container_gearbox, small_toolbox, ...), so derive it rather than keep a second list.
+            NewItemName = System.IO.Path.GetFileNameWithoutExtension(def.BundlePath),
             ParentId = ContainerParentId,
             HandbookParentId = HandbookParentId,
             HandbookPriceRoubles = def.HandbookPrice,
@@ -536,6 +540,7 @@ public class CnnContainersLoader(
             // weapon-mod parent made the client show "Install" instead of "Open" - it never opened.
             ItemTplToClone = CloneBase,
             NewId = MapbookId,
+            NewItemName = "item_mapbook",
             ParentId = ContainerParentId,
             HandbookParentId = MapbookHandbookParentId,
             HandbookPriceRoubles = 76000,
@@ -643,6 +648,8 @@ public class CnnContainersLoader(
         {
             ItemTplToClone = OnyxCloneBase,
             NewId = OnyxId,
+            // Matches EFT's naming for the secure containers this is cloned from (item_secure_kappa etc.)
+            NewItemName = "item_secure_onyx",
             ParentId = SecureContainerParentId,
             HandbookParentId = OnyxHandbookParentId,
             HandbookPriceRoubles = 12999999,
